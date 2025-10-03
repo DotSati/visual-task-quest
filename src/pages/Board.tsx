@@ -1,0 +1,260 @@
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
+import { ArrowLeft } from "lucide-react";
+import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { KanbanColumn } from "@/components/kanban/KanbanColumn";
+import { TaskDialog } from "@/components/kanban/TaskDialog";
+import { ColumnDialog } from "@/components/kanban/ColumnDialog";
+
+type Column = {
+  id: string;
+  title: string;
+  position: number;
+  board_id: string;
+};
+
+type Subtask = {
+  id: string;
+  title: string;
+  description: string | null;
+  is_completed: boolean;
+  position: number;
+  task_id: string;
+};
+
+type Task = {
+  id: string;
+  title: string;
+  description: string | null;
+  due_date: string | null;
+  position: number;
+  column_id: string;
+  subtasks?: Subtask[];
+};
+
+export default function Board() {
+  const { boardId } = useParams();
+  const navigate = useNavigate();
+  const [board, setBoard] = useState<any>(null);
+  const [columns, setColumns] = useState<Column[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [columnDialogOpen, setColumnDialogOpen] = useState(false);
+  const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  useEffect(() => {
+    loadBoard();
+    loadColumns();
+    loadTasks();
+  }, [boardId]);
+
+  const loadBoard = async () => {
+    const { data, error } = await supabase
+      .from("boards")
+      .select("*")
+      .eq("id", boardId)
+      .single();
+
+    if (error || !data) {
+      toast({
+        title: "Error",
+        description: "Board not found",
+        variant: "destructive"
+      });
+      navigate("/dashboard");
+    } else {
+      setBoard(data);
+    }
+  };
+
+  const loadColumns = async () => {
+    const { data, error } = await supabase
+      .from("columns")
+      .select("*")
+      .eq("board_id", boardId)
+      .order("position");
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load columns",
+        variant: "destructive"
+      });
+    } else {
+      setColumns(data || []);
+    }
+  };
+
+  const loadTasks = async () => {
+    const { data: tasksData, error: tasksError } = await supabase
+      .from("tasks")
+      .select(`
+        *,
+        columns!inner(board_id)
+      `)
+      .eq("columns.board_id", boardId)
+      .order("position");
+
+    if (tasksError) {
+      toast({
+        title: "Error",
+        description: "Failed to load tasks",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const { data: subtasksData } = await supabase
+      .from("subtasks")
+      .select("*")
+      .in("task_id", (tasksData || []).map(t => t.id))
+      .order("position");
+
+    const tasksWithSubtasks = (tasksData || []).map(task => ({
+      ...task,
+      subtasks: (subtasksData || []).filter(st => st.task_id === task.id)
+    }));
+
+    setTasks(tasksWithSubtasks);
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    const activeTask = tasks.find(t => t.id === activeId);
+    const overTask = tasks.find(t => t.id === overId);
+    const overColumn = columns.find(c => c.id === overId);
+
+    if (!activeTask) return;
+
+    // Moving over another task
+    if (overTask && activeTask.column_id === overTask.column_id) {
+      const columnTasks = tasks.filter(t => t.column_id === activeTask.column_id);
+      const oldIndex = columnTasks.findIndex(t => t.id === activeId);
+      const newIndex = columnTasks.findIndex(t => t.id === overId);
+
+      if (oldIndex !== newIndex) {
+        const newTasks = [...tasks];
+        const taskIndex = newTasks.findIndex(t => t.id === activeId);
+        newTasks.splice(taskIndex, 1);
+        const insertIndex = newTasks.findIndex(t => t.id === overId);
+        newTasks.splice(newIndex > oldIndex ? insertIndex + 1 : insertIndex, 0, activeTask);
+        setTasks(newTasks);
+      }
+    }
+    // Moving to a different column
+    else if (overColumn && activeTask.column_id !== overColumn.id) {
+      const newTasks = tasks.map(t =>
+        t.id === activeId ? { ...t, column_id: overColumn.id } : t
+      );
+      setTasks(newTasks);
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    const activeTask = tasks.find(t => t.id === activeId);
+    if (!activeTask) return;
+
+    const columnTasks = tasks.filter(t => t.column_id === activeTask.column_id);
+    const newPosition = columnTasks.findIndex(t => t.id === activeId);
+
+    await supabase
+      .from("tasks")
+      .update({
+        column_id: activeTask.column_id,
+        position: newPosition
+      })
+      .eq("id", activeId);
+
+    loadTasks();
+  };
+
+  const openNewTaskDialog = (columnId: string) => {
+    setSelectedColumnId(columnId);
+    setTaskDialogOpen(true);
+  };
+
+  return (
+    <div className="min-h-screen bg-background p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+            <h1 className="text-4xl font-bold gradient-text">
+              {board?.title}
+            </h1>
+          </div>
+          <Button onClick={() => setColumnDialogOpen(true)}>
+            Add Column
+          </Button>
+        </div>
+
+        <DndContext
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {columns.map((column) => (
+              <KanbanColumn
+                key={column.id}
+                column={column}
+                tasks={tasks.filter(t => t.column_id === column.id)}
+                onAddTask={() => openNewTaskDialog(column.id)}
+                onTaskUpdate={loadTasks}
+                onColumnDelete={loadColumns}
+              />
+            ))}
+          </div>
+        </DndContext>
+
+        <TaskDialog
+          open={taskDialogOpen}
+          onOpenChange={setTaskDialogOpen}
+          columnId={selectedColumnId}
+          onTaskCreated={loadTasks}
+        />
+
+        <ColumnDialog
+          open={columnDialogOpen}
+          onOpenChange={setColumnDialogOpen}
+          boardId={boardId!}
+          onColumnCreated={loadColumns}
+          existingColumnsCount={columns.length}
+        />
+      </div>
+    </div>
+  );
+}
