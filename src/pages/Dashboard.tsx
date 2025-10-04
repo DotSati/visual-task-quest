@@ -174,14 +174,14 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-8">
+    <div className="min-h-screen bg-background p-4">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold gradient-text">My Boards</h1>
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-2xl font-bold gradient-text">My Boards</h1>
           <div className="flex gap-2">
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button size="sm">
                   <Plus className="w-4 h-4 mr-2" />
                   New Board
                 </Button>
@@ -218,7 +218,7 @@ export default function Dashboard() {
                 </div>
               </DialogContent>
             </Dialog>
-            <Button variant="outline" onClick={handleSignOut}>
+            <Button variant="outline" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out
             </Button>
@@ -226,28 +226,28 @@ export default function Dashboard() {
         </div>
 
         {boards.length === 0 ? (
-          <Card className="p-12 text-center">
-            <CardHeader>
-              <CardTitle>No boards yet</CardTitle>
-              <CardDescription>
+          <Card className="p-8 text-center">
+            <CardHeader className="p-4">
+              <CardTitle className="text-lg">No boards yet</CardTitle>
+              <CardDescription className="text-sm">
                 Create your first board to get started
               </CardDescription>
             </CardHeader>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {boards.map((board) => (
               <Card
                 key={board.id}
                 className="hover:border-primary transition-colors cursor-pointer group"
               >
-                <CardHeader onClick={() => navigate(`/board/${board.id}`)}>
-                  <CardTitle>{board.title}</CardTitle>
+                <CardHeader className="p-4" onClick={() => navigate(`/board/${board.id}`)}>
+                  <CardTitle className="text-base">{board.title}</CardTitle>
                   {board.description && (
-                    <CardDescription>{board.description}</CardDescription>
+                    <CardDescription className="text-xs line-clamp-2">{board.description}</CardDescription>
                   )}
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 pt-0">
                   <Button
                     variant="ghost"
                     size="sm"
