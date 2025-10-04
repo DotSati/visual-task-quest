@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { Plus, LogOut, Trash2 } from "lucide-react";
 import { Session, User } from "@supabase/supabase-js";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type Board = {
   id: string;
@@ -179,6 +180,7 @@ export default function Dashboard() {
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold gradient-text">My Boards</h1>
           <div className="flex gap-2">
+            <ThemeToggle />
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button size="sm">
