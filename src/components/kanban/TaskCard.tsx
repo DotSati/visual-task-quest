@@ -28,10 +28,10 @@ type Task = {
 type TaskCardProps = {
   task: Task;
   onUpdate: () => void;
+  onClick?: () => void;
 };
 
-export function TaskCard({ task, onUpdate }: TaskCardProps) {
-  const [editOpen, setEditOpen] = useState(false);
+export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
   const {
     attributes,
     listeners,
@@ -51,44 +51,35 @@ export function TaskCard({ task, onUpdate }: TaskCardProps) {
   const totalSubtasks = task.subtasks?.length || 0;
 
   return (
-    <>
-      <Card
-        ref={setNodeRef}
-        style={style}
-        {...attributes}
-        {...listeners}
-        className="kanban-task"
-        onClick={() => setEditOpen(true)}
-      >
-        <CardHeader className="p-3">
-          <CardTitle className="text-sm font-medium">{task.title}</CardTitle>
-          {task.description && (
-            <CardDescription className="text-xs line-clamp-2">
-              {task.description}
-            </CardDescription>
-          )}
-        </CardHeader>
-        <CardContent className="p-3 pt-0 space-y-2">
-          {task.due_date && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Calendar className="w-3 h-3" />
-              {new Date(task.due_date).toLocaleDateString()}
-            </div>
-          )}
-          {totalSubtasks > 0 && (
-            <div className="text-xs text-muted-foreground">
-              {completedSubtasks}/{totalSubtasks} subtasks
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <TaskEditDialog
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        task={task}
-        onUpdate={onUpdate}
-      />
-    </>
+    <Card
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="kanban-task"
+      onClick={onClick}
+    >
+      <CardHeader className="p-3">
+        <CardTitle className="text-sm font-medium">{task.title}</CardTitle>
+        {task.description && (
+          <CardDescription className="text-xs line-clamp-2">
+            {task.description}
+          </CardDescription>
+        )}
+      </CardHeader>
+      <CardContent className="p-3 pt-0 space-y-2">
+        {task.due_date && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Calendar className="w-3 h-3" />
+            {new Date(task.due_date).toLocaleDateString()}
+          </div>
+        )}
+        {totalSubtasks > 0 && (
+          <div className="text-xs text-muted-foreground">
+            {completedSubtasks}/{totalSubtasks} subtasks
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

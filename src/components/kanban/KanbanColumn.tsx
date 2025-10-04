@@ -38,9 +38,10 @@ type KanbanColumnProps = {
   onAddTask: () => void;
   onTaskUpdate: () => void;
   onColumnDelete: () => void;
+  onTaskClick: (taskId: string) => void;
 };
 
-export function KanbanColumn({ column, tasks, onAddTask, onTaskUpdate, onColumnDelete }: KanbanColumnProps) {
+export function KanbanColumn({ column, tasks, onAddTask, onTaskUpdate, onColumnDelete, onTaskClick }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({
     id: column.id,
   });
@@ -83,7 +84,12 @@ export function KanbanColumn({ column, tasks, onAddTask, onTaskUpdate, onColumnD
       <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
         <div className="space-y-2">
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} onUpdate={onTaskUpdate} />
+            <TaskCard 
+              key={task.id} 
+              task={task} 
+              onUpdate={onTaskUpdate}
+              onClick={() => onTaskClick(task.id)}
+            />
           ))}
         </div>
       </SortableContext>

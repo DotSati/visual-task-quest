@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { KanbanColumn } from "@/components/kanban/KanbanColumn";
 import { TaskDialog } from "@/components/kanban/TaskDialog";
+import { TaskEditDialog } from "@/components/kanban/TaskEditDialog";
 import { ColumnDialog } from "@/components/kanban/ColumnDialog";
 
 type Column = {
@@ -38,6 +39,7 @@ type Task = {
 export default function Board() {
   const { boardId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [board, setBoard] = useState<any>(null);
   const [columns, setColumns] = useState<Column[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -45,6 +47,8 @@ export default function Board() {
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [columnDialogOpen, setColumnDialogOpen] = useState(false);
   const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [taskEditOpen, setTaskEditOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -59,6 +63,14 @@ export default function Board() {
     loadColumns();
     loadTasks();
   }, [boardId]);
+
+  useEffect(() => {
+    const taskId = searchParams.get('task');
+    if (taskId && tasks.length > 0) {
+      setSelectedTaskId(taskId);
+      setTaskEditOpen(true);
+    }
+  }, [searchParams, tasks]);
 
   const loadBoard = async () => {
     const { data, error } = await supabase
@@ -202,6 +214,12 @@ export default function Board() {
     setTaskDialogOpen(true);
   };
 
+  const handleTaskEditClose = () => {
+    setTaskEditOpen(false);
+    setSelectedTaskId(null);
+    setSearchParams({});
+  };
+
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-7xl mx-auto">
@@ -235,10 +253,22 @@ export default function Board() {
                 onAddTask={() => openNewTaskDialog(column.id)}
                 onTaskUpdate={loadTasks}
                 onColumnDelete={loadColumns}
+                onTaskClick={(taskId) => {
+                  setSearchParams({ task: taskId });
+                }}
               />
             ))}
           </div>
         </DndContext>
+
+        {selectedTaskId && (
+          <TaskEditDialog
+            open={taskEditOpen}
+            onOpenChange={handleTaskEditClose}
+            task={tasks.find(t => t.id === selectedTaskId)!}
+            onUpdate={loadTasks}
+          />
+        )}
 
         <TaskDialog
           open={taskDialogOpen}
