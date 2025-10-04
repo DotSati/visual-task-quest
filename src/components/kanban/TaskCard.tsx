@@ -59,27 +59,29 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
       className="kanban-task"
       onClick={onClick}
     >
-      <CardHeader className="p-3">
-        <CardTitle className="text-sm font-medium">{task.title}</CardTitle>
+      <CardHeader className="p-2 pb-1.5">
+        <CardTitle className="text-xs font-medium leading-tight line-clamp-2">{task.title}</CardTitle>
         {task.description && (
-          <CardDescription className="text-xs line-clamp-2">
+          <CardDescription className="text-[11px] line-clamp-1 mt-1">
             {task.description}
           </CardDescription>
         )}
       </CardHeader>
-      <CardContent className="p-3 pt-0 space-y-2">
-        {task.due_date && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Calendar className="w-3 h-3" />
-            {new Date(task.due_date).toLocaleDateString()}
-          </div>
-        )}
-        {totalSubtasks > 0 && (
-          <div className="text-xs text-muted-foreground">
-            {completedSubtasks}/{totalSubtasks} subtasks
-          </div>
-        )}
-      </CardContent>
+      {(task.due_date || totalSubtasks > 0) && (
+        <CardContent className="p-2 pt-0 flex items-center gap-3 text-[11px]">
+          {task.due_date && (
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Calendar className="w-3 h-3" />
+              <span>{new Date(task.due_date).toLocaleDateString()}</span>
+            </div>
+          )}
+          {totalSubtasks > 0 && (
+            <div className="text-muted-foreground">
+              {completedSubtasks}/{totalSubtasks}
+            </div>
+          )}
+        </CardContent>
+      )}
     </Card>
   );
 }

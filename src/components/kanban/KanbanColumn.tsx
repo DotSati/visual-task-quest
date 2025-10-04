@@ -68,21 +68,21 @@ export function KanbanColumn({ column, tasks, onAddTask, onTaskUpdate, onColumnD
   };
 
   return (
-    <div ref={setNodeRef} className="kanban-column min-w-[300px] max-w-[300px] flex-shrink-0">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="font-semibold text-lg">{column.title}</h3>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={onAddTask}>
-            <Plus className="w-4 h-4" />
+    <div ref={setNodeRef} className="kanban-column min-w-[260px] max-w-[260px] flex-shrink-0">
+      <div className="flex justify-between items-center mb-2.5 px-1">
+        <h3 className="font-semibold text-sm truncate">{column.title}</h3>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onAddTask}>
+            <Plus className="w-3.5 h-3.5" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={deleteColumn}>
-            <Trash2 className="w-4 h-4" />
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={deleteColumn}>
+            <Trash2 className="w-3.5 h-3.5" />
           </Button>
         </div>
       </div>
 
       <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {tasks.map((task) => (
             <TaskCard 
               key={task.id} 
@@ -95,7 +95,7 @@ export function KanbanColumn({ column, tasks, onAddTask, onTaskUpdate, onColumnD
       </SortableContext>
 
       {tasks.length === 0 && (
-        <div className="text-center py-8 text-muted-foreground text-sm">
+        <div className="text-center py-6 text-muted-foreground text-xs">
           No tasks yet
         </div>
       )}

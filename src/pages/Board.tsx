@@ -221,19 +221,19 @@ export default function Board() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
+    <div className="min-h-screen bg-background p-4">
+      <div className="max-w-[calc(100vw-2rem)] mx-auto">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="w-4 h-4 mr-1.5" />
               Back
             </Button>
-            <h1 className="text-4xl font-bold gradient-text">
+            <h1 className="text-2xl font-bold gradient-text">
               {board?.title}
             </h1>
           </div>
-          <Button onClick={() => setColumnDialogOpen(true)}>
+          <Button size="sm" onClick={() => setColumnDialogOpen(true)}>
             Add Column
           </Button>
         </div>
@@ -244,7 +244,7 @@ export default function Board() {
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-4 overflow-x-auto pb-4">
+          <div className="flex gap-3 overflow-x-auto pb-4">
             {columns.map((column) => (
               <KanbanColumn
                 key={column.id}

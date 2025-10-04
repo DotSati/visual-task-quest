@@ -61,18 +61,18 @@
 
 @layer components {
   .kanban-column {
-    @apply bg-card rounded-lg p-4 border border-border;
+    @apply bg-card rounded-md p-2.5 border border-border;
     box-shadow: var(--shadow-card);
   }
   
   .kanban-task {
-    @apply bg-secondary rounded-md p-3 border border-border cursor-move;
+    @apply bg-secondary rounded-sm p-2 border border-border cursor-move;
     transition: var(--transition-smooth);
   }
   
   .kanban-task:hover {
     @apply border-primary;
-    box-shadow: var(--shadow-elegant);
+    box-shadow: 0 2px 8px hsl(237 85% 64% / 0.2);
   }
   
   .gradient-text {
