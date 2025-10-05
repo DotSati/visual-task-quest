@@ -3,12 +3,18 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { KanbanColumn } from "@/components/kanban/KanbanColumn";
 import { TaskDialog } from "@/components/kanban/TaskDialog";
 import { TaskEditDialog } from "@/components/kanban/TaskEditDialog";
 import { ColumnDialog } from "@/components/kanban/ColumnDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type Column = {
   id: string;
@@ -41,6 +47,7 @@ export default function Board() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [board, setBoard] = useState<any>(null);
+  const [boards, setBoards] = useState<any[]>([]);
   const [columns, setColumns] = useState<Column[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -60,6 +67,7 @@ export default function Board() {
 
   useEffect(() => {
     loadBoard();
+    loadBoards();
     loadColumns();
     loadTasks();
   }, [boardId]);
@@ -88,6 +96,21 @@ export default function Board() {
       navigate("/dashboard");
     } else {
       setBoard(data);
+    }
+  };
+
+  const loadBoards = async () => {
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session?.user) return;
+
+    const { data, error } = await supabase
+      .from("boards")
+      .select("*")
+      .eq("user_id", session.session.user.id)
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setBoards(data);
     }
   };
 
@@ -233,9 +256,30 @@ export default function Board() {
               {board?.title}
             </h1>
           </div>
-          <Button size="sm" onClick={() => setColumnDialogOpen(true)}>
-            Add Column
-          </Button>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Switch Board
+                  <ChevronDown className="w-4 h-4 ml-1.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {boards.map((b) => (
+                  <DropdownMenuItem
+                    key={b.id}
+                    onClick={() => navigate(`/board/${b.id}`)}
+                    className={b.id === boardId ? "bg-accent" : ""}
+                  >
+                    {b.title}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button size="sm" onClick={() => setColumnDialogOpen(true)}>
+              Add Column
+            </Button>
+          </div>
         </div>
 
         <DndContext
