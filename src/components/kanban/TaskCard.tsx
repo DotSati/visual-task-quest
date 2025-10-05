@@ -61,11 +61,6 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
     >
       <CardHeader className="p-2 pb-1.5">
         <CardTitle className="text-xs font-medium leading-tight line-clamp-2">{task.title}</CardTitle>
-        {task.description && (
-          <CardDescription className="text-[11px] line-clamp-1 mt-1">
-            {task.description}
-          </CardDescription>
-        )}
       </CardHeader>
       {(task.due_date || totalSubtasks > 0) && (
         <CardContent className="p-2 pt-0 flex items-center gap-3 text-[11px]">
