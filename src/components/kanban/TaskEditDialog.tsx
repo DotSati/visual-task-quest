@@ -7,7 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Eye, FileEdit } from "lucide-react";
+import { MarkdownRenderer } from "./MarkdownRenderer";
+import { z } from "zod";
+
+const descriptionSchema = z.string().max(5000, "Description must be less than 5000 characters");
 
 type Subtask = {
   id: string;
@@ -40,8 +44,20 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
   const [description, setDescription] = useState(task.description || "");
   const [dueDate, setDueDate] = useState(task.due_date || "");
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   const updateTask = async () => {
+    // Validate description
+    const validation = descriptionSchema.safeParse(description);
+    if (!validation.success) {
+      toast({
+        title: "Validation Error",
+        description: validation.error.errors[0].message,
+        variant: "destructive"
+      });
+      return;
+    }
+
     const { error } = await supabase
       .from("tasks")
       .update({
@@ -167,12 +183,47 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="edit-description">Description</Label>
-            <Textarea
-              id="edit-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
+            <div className="flex items-center justify-between">
+              <Label htmlFor="edit-description">Description (Markdown supported)</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsPreviewMode(!isPreviewMode)}
+              >
+                {isPreviewMode ? (
+                  <>
+                    <FileEdit className="w-4 h-4 mr-1.5" />
+                    Edit
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-4 h-4 mr-1.5" />
+                    Preview
+                  </>
+                )}
+              </Button>
+            </div>
+            {isPreviewMode ? (
+              <div className="min-h-[100px] p-3 border rounded-md bg-muted/30">
+                {description ? (
+                  <MarkdownRenderer content={description} />
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No description</p>
+                )}
+              </div>
+            ) : (
+              <Textarea
+                id="edit-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Supports **bold**, *italic*, `code`, lists, and more..."
+                className="min-h-[100px] font-mono text-sm"
+              />
+            )}
+            <p className="text-xs text-muted-foreground">
+              {description.length}/5000 characters
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-due-date">Due Date</Label>
