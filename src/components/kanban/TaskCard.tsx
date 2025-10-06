@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TaskEditDialog } from "./TaskEditDialog";
-import { Calendar } from "lucide-react";
+import { Calendar, Paperclip } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 type Subtask = {
   id: string;
@@ -32,6 +33,8 @@ type TaskCardProps = {
 };
 
 export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
+  const [attachmentCount, setAttachmentCount] = useState(0);
+  
   const {
     attributes,
     listeners,
@@ -40,6 +43,19 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
     transition,
     isDragging,
   } = useSortable({ id: task.id });
+
+  useEffect(() => {
+    loadAttachmentCount();
+  }, [task.id]);
+
+  const loadAttachmentCount = async () => {
+    const { count } = await supabase
+      .from("task_attachments")
+      .select("*", { count: 'exact', head: true })
+      .eq("task_id", task.id);
+    
+    setAttachmentCount(count || 0);
+  };
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -62,7 +78,7 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
       <CardHeader className="p-2 pb-1.5">
         <CardTitle className="text-xs font-medium leading-tight line-clamp-2">{task.title}</CardTitle>
       </CardHeader>
-      {(task.due_date || totalSubtasks > 0) && (
+      {(task.due_date || totalSubtasks > 0 || attachmentCount > 0) && (
         <CardContent className="p-2 pt-0 flex items-center gap-3 text-[11px]">
           {task.due_date && (
             <div className="flex items-center gap-1 text-muted-foreground">
@@ -73,6 +89,12 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
           {totalSubtasks > 0 && (
             <div className="text-muted-foreground">
               {completedSubtasks}/{totalSubtasks}
+            </div>
+          )}
+          {attachmentCount > 0 && (
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Paperclip className="w-3 h-3" />
+              <span>{attachmentCount}</span>
             </div>
           )}
         </CardContent>

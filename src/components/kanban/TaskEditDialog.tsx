@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Trash2, Plus, Eye, FileEdit } from "lucide-react";
+import { Trash2, Plus, Eye, FileEdit, Paperclip, Download, X } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { z } from "zod";
 
@@ -20,6 +20,15 @@ type Subtask = {
   is_completed: boolean;
   position: number;
   task_id: string;
+};
+
+type Attachment = {
+  id: string;
+  file_name: string;
+  file_path: string;
+  file_size: number;
+  mime_type: string | null;
+  created_at: string;
 };
 
 type Task = {
@@ -45,6 +54,26 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
   const [dueDate, setDueDate] = useState(task.due_date || "");
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      loadAttachments();
+    }
+  }, [open, task.id]);
+
+  const loadAttachments = async () => {
+    const { data, error } = await supabase
+      .from("task_attachments")
+      .select("*")
+      .eq("task_id", task.id)
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setAttachments(data);
+    }
+  };
 
   const updateTask = async () => {
     // Validate description
@@ -166,6 +195,119 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
     }
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to upload files",
+        variant: "destructive"
+      });
+      setIsUploading(false);
+      return;
+    }
+
+    for (const file of Array.from(files)) {
+      try {
+        const fileExt = file.name.split('.').pop();
+        const filePath = `${task.id}/${crypto.randomUUID()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('task-files')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { error: dbError } = await supabase
+          .from('task_attachments')
+          .insert({
+            task_id: task.id,
+            file_name: file.name,
+            file_path: filePath,
+            file_size: file.size,
+            mime_type: file.type,
+            uploaded_by: user.id
+          });
+
+        if (dbError) throw dbError;
+      } catch (error: any) {
+        toast({
+          title: "Upload Failed",
+          description: `Failed to upload ${file.name}`,
+          variant: "destructive"
+        });
+      }
+    }
+
+    setIsUploading(false);
+    loadAttachments();
+    event.target.value = '';
+  };
+
+  const downloadFile = async (attachment: Attachment) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('task-files')
+        .download(attachment.file_path);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = attachment.file_name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: "Failed to download file",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteAttachment = async (attachment: Attachment) => {
+    try {
+      const { error: storageError } = await supabase.storage
+        .from('task-files')
+        .remove([attachment.file_path]);
+
+      if (storageError) throw storageError;
+
+      const { error: dbError } = await supabase
+        .from('task_attachments')
+        .delete()
+        .eq('id', attachment.id);
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "Success",
+        description: "File deleted"
+      });
+      loadAttachments();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete file",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -268,6 +410,47 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
               <Button onClick={addSubtask} size="sm">
                 <Plus className="w-4 h-4" />
               </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Attachments</Label>
+            {attachments.length > 0 && (
+              <div className="space-y-2">
+                {attachments.map((attachment) => (
+                  <div key={attachment.id} className="flex items-center gap-2 p-2 bg-secondary rounded">
+                    <Paperclip className="w-4 h-4 text-muted-foreground" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm truncate">{attachment.file_name}</p>
+                      <p className="text-xs text-muted-foreground">{formatFileSize(attachment.file_size)}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => downloadFile(attachment)}
+                    >
+                      <Download className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteAttachment(attachment)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div>
+              <Input
+                type="file"
+                multiple
+                onChange={handleFileUpload}
+                disabled={isUploading}
+                className="cursor-pointer"
+              />
+              {isUploading && <p className="text-xs text-muted-foreground mt-1">Uploading...</p>}
             </div>
           </div>
 
