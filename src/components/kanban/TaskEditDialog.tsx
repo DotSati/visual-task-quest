@@ -63,6 +63,28 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
     }
   }, [open, task.id]);
 
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) {
+            await uploadFile(file);
+          }
+        }
+      }
+    };
+
+    if (open) {
+      document.addEventListener('paste', handlePaste);
+      return () => document.removeEventListener('paste', handlePaste);
+    }
+  }, [open]);
+
   const loadAttachments = async () => {
     const { data, error } = await supabase
       .from("task_attachments")
@@ -195,11 +217,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-
-    setIsUploading(true);
+  const uploadFile = async (file: File) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       toast({
@@ -207,44 +225,56 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
         description: "You must be logged in to upload files",
         variant: "destructive"
       });
-      setIsUploading(false);
       return;
     }
 
-    for (const file of Array.from(files)) {
-      try {
-        const fileExt = file.name.split('.').pop();
-        const filePath = `${task.id}/${crypto.randomUUID()}.${fileExt}`;
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop() || 'png';
+      const filePath = `${task.id}/${crypto.randomUUID()}.${fileExt}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from('task-files')
-          .upload(filePath, file);
+      const { error: uploadError } = await supabase.storage
+        .from('task-files')
+        .upload(filePath, file);
 
-        if (uploadError) throw uploadError;
+      if (uploadError) throw uploadError;
 
-        const { error: dbError } = await supabase
-          .from('task_attachments')
-          .insert({
-            task_id: task.id,
-            file_name: file.name,
-            file_path: filePath,
-            file_size: file.size,
-            mime_type: file.type,
-            uploaded_by: user.id
-          });
-
-        if (dbError) throw dbError;
-      } catch (error: any) {
-        toast({
-          title: "Upload Failed",
-          description: `Failed to upload ${file.name}`,
-          variant: "destructive"
+      const { error: dbError } = await supabase
+        .from('task_attachments')
+        .insert({
+          task_id: task.id,
+          file_name: file.name,
+          file_path: filePath,
+          file_size: file.size,
+          mime_type: file.type,
+          uploaded_by: user.id
         });
-      }
-    }
 
-    setIsUploading(false);
-    loadAttachments();
+      if (dbError) throw dbError;
+
+      toast({
+        title: "Success",
+        description: `${file.name} uploaded`
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: `Failed to upload ${file.name}`,
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploading(false);
+      loadAttachments();
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    for (const file of Array.from(files)) {
+      await uploadFile(file);
+    }
     event.target.value = '';
   };
 
@@ -415,6 +445,9 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
 
           <div className="space-y-2">
             <Label>Attachments</Label>
+            <p className="text-xs text-muted-foreground">
+              Drag & drop files or paste screenshots (Ctrl/Cmd+V)
+            </p>
             {attachments.length > 0 && (
               <div className="space-y-2">
                 {attachments.map((attachment) => (
