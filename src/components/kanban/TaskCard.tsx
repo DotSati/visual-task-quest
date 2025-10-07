@@ -23,6 +23,7 @@ type Task = {
   due_date: string | null;
   position: number;
   column_id: string;
+  task_number: number | null;
   subtasks?: Subtask[];
 };
 
@@ -76,7 +77,12 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
       onClick={onClick}
     >
       <CardHeader className="p-2 pb-1.5">
-        <CardTitle className="text-xs font-medium leading-tight line-clamp-2">{task.title}</CardTitle>
+        <CardTitle className="text-xs font-medium leading-tight line-clamp-2 flex items-center gap-2">
+          {task.task_number && (
+            <span className="text-muted-foreground">#{task.task_number}</span>
+          )}
+          <span className="flex-1">{task.title}</span>
+        </CardTitle>
       </CardHeader>
       {(task.due_date || totalSubtasks > 0 || attachmentCount > 0) && (
         <CardContent className="p-2 pt-0 flex items-center gap-3 text-[11px]">

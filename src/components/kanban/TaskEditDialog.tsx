@@ -38,6 +38,7 @@ type Task = {
   due_date: string | null;
   position: number;
   column_id: string;
+  task_number: number | null;
   subtasks?: Subtask[];
 };
 
@@ -342,7 +343,9 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Task</DialogTitle>
+          <DialogTitle>
+            {task.task_number ? `Edit Task #${task.task_number}` : 'Edit Task'}
+          </DialogTitle>
           <DialogDescription>Update task details and manage subtasks</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">

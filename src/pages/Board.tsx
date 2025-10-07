@@ -39,6 +39,7 @@ type Task = {
   due_date: string | null;
   position: number;
   column_id: string;
+  task_number: number | null;
   subtasks?: Subtask[];
 };
 

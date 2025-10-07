@@ -208,6 +208,7 @@ export type Database = {
           due_date: string | null
           id: string
           position: number
+          task_number: number | null
           title: string
           updated_at: string
         }
@@ -218,6 +219,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           position: number
+          task_number?: number | null
           title: string
           updated_at?: string
         }
@@ -228,6 +230,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           position?: number
+          task_number?: number | null
           title?: string
           updated_at?: string
         }
@@ -246,7 +249,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_next_task_number: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
