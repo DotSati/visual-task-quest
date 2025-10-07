@@ -24,6 +24,7 @@ type Task = {
   position: number;
   column_id: string;
   task_number: number | null;
+  color: string | null;
   subtasks?: Subtask[];
 };
 
@@ -70,7 +71,10 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
   return (
     <Card
       ref={setNodeRef}
-      style={style}
+      style={{
+        ...style,
+        borderLeft: task.color ? `4px solid ${task.color}` : undefined,
+      }}
       {...attributes}
       {...listeners}
       className="kanban-task"

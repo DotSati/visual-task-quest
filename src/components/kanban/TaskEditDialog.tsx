@@ -39,6 +39,7 @@ type Task = {
   position: number;
   column_id: string;
   task_number: number | null;
+  color: string | null;
   subtasks?: Subtask[];
 };
 
@@ -53,6 +54,8 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || "");
   const [dueDate, setDueDate] = useState(task.due_date || "");
+  const [color, setColor] = useState(task.color || "");
+  const [boardColors, setBoardColors] = useState<string[]>([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -61,6 +64,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
   useEffect(() => {
     if (open) {
       loadAttachments();
+      loadBoardColors();
     }
   }, [open, task.id]);
 
@@ -98,6 +102,35 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
     }
   };
 
+  const loadBoardColors = async () => {
+    // Get the board_id from the task's column
+    const { data: column } = await supabase
+      .from("columns")
+      .select("board_id")
+      .eq("id", task.column_id)
+      .single();
+
+    if (column) {
+      // Get all unique colors from tasks in this board
+      const { data: tasks } = await supabase
+        .from("tasks")
+        .select("color")
+        .in("column_id", 
+          await supabase
+            .from("columns")
+            .select("id")
+            .eq("board_id", column.board_id)
+            .then(({ data }) => data?.map(c => c.id) || [])
+        )
+        .not("color", "is", null);
+
+      if (tasks) {
+        const uniqueColors = Array.from(new Set(tasks.map(t => t.color).filter(Boolean)));
+        setBoardColors(uniqueColors as string[]);
+      }
+    }
+  };
+
   const updateTask = async () => {
     // Validate description
     const validation = descriptionSchema.safeParse(description);
@@ -115,7 +148,8 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
       .update({
         title,
         description: description || null,
-        due_date: dueDate || null
+        due_date: dueDate || null,
+        color: color || null
       })
       .eq("id", task.id);
 
@@ -408,6 +442,53 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Task Color</Label>
+            <div className="space-y-3">
+              {boardColors.length > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Recently used colors</p>
+                  <div className="flex flex-wrap gap-2">
+                    {boardColors.map((boardColor) => (
+                      <button
+                        key={boardColor}
+                        type="button"
+                        onClick={() => setColor(boardColor)}
+                        className="w-8 h-8 rounded border-2 transition-all hover:scale-110"
+                        style={{
+                          backgroundColor: boardColor,
+                          borderColor: color === boardColor ? 'hsl(var(--primary))' : 'hsl(var(--border))'
+                        }}
+                        title={boardColor}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">Choose a custom color</p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="color"
+                    value={color || "#3b82f6"}
+                    onChange={(e) => setColor(e.target.value)}
+                    className="w-20 h-10 cursor-pointer"
+                  />
+                  {color && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setColor("")}
+                    >
+                      Clear Color
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">

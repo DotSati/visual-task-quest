@@ -23,6 +23,7 @@ type Task = {
   position: number;
   column_id: string;
   task_number: number | null;
+  color: string | null;
   subtasks?: Subtask[];
 };
 

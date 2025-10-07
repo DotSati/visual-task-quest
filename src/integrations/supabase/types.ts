@@ -202,6 +202,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          color: string | null
           column_id: string
           created_at: string
           description: string | null
@@ -213,6 +214,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          color?: string | null
           column_id: string
           created_at?: string
           description?: string | null
@@ -224,6 +226,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          color?: string | null
           column_id?: string
           created_at?: string
           description?: string | null
