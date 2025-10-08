@@ -134,6 +134,42 @@ export default function Board() {
     }
   };
 
+  const updateColumnSort = async (sortType: string) => {
+    const { error } = await supabase
+      .from("boards")
+      .update({ column_sort: sortType })
+      .eq("id", boardId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update sorting",
+        variant: "destructive"
+      });
+    } else {
+      loadBoard();
+      toast({
+        title: "Success",
+        description: "Column sorting updated"
+      });
+    }
+  };
+
+  const getSortedTasks = (columnTasks: Task[]) => {
+    if (!board?.column_sort) return columnTasks;
+
+    return [...columnTasks].sort((a, b) => {
+      const aNum = a.task_number ?? 0;
+      const bNum = b.task_number ?? 0;
+      
+      if (board.column_sort === 'task_number_desc') {
+        return bNum - aNum;
+      } else {
+        return aNum - bNum;
+      }
+    });
+  };
+
   const loadTasks = async () => {
     const { data: tasksData, error: tasksError } = await supabase
       .from("tasks")
@@ -262,6 +298,28 @@ export default function Board() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
+                  Sort: {board?.column_sort === 'task_number_desc' ? 'Task # ↓' : 'Task # ↑'}
+                  <ChevronDown className="w-4 h-4 ml-1.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem
+                  onClick={() => updateColumnSort('task_number_desc')}
+                  className={board?.column_sort === 'task_number_desc' ? "bg-accent" : ""}
+                >
+                  Sort by Task # (Descending)
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => updateColumnSort('task_number_asc')}
+                  className={board?.column_sort === 'task_number_asc' ? "bg-accent" : ""}
+                >
+                  Sort by Task # (Ascending)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
                   Switch Board
                   <ChevronDown className="w-4 h-4 ml-1.5" />
                 </Button>
@@ -295,7 +353,7 @@ export default function Board() {
               <KanbanColumn
                 key={column.id}
                 column={column}
-                tasks={tasks.filter(t => t.column_id === column.id)}
+                tasks={getSortedTasks(tasks.filter(t => t.column_id === column.id))}
                 onAddTask={() => openNewTaskDialog(column.id)}
                 onTaskUpdate={loadTasks}
                 onColumnDelete={loadColumns}

@@ -43,6 +43,7 @@ export type Database = {
       }
       boards: {
         Row: {
+          column_sort: string | null
           created_at: string
           description: string | null
           id: string
@@ -51,6 +52,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          column_sort?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -59,6 +61,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          column_sort?: string | null
           created_at?: string
           description?: string | null
           id?: string
