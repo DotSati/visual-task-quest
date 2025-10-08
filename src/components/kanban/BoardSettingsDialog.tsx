@@ -15,16 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Trash2, Plus } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, ArrowRight } from "lucide-react";
 
 type Column = {
   id: string;
   title: string;
   position: number;
-  board_id: string;
-  sort_order: string | null;
 };
 
 type AutomationRule = {
@@ -36,23 +34,26 @@ type AutomationRule = {
   enabled: boolean;
 };
 
-interface AutomationSettingsProps {
+interface BoardSettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   boardId: string;
   columns: Column[];
+  onRulesChange: () => void;
 }
 
-export function AutomationSettings({
+export function BoardSettingsDialog({
   open,
   onOpenChange,
   boardId,
   columns,
-}: AutomationSettingsProps) {
+  onRulesChange,
+}: BoardSettingsDialogProps) {
   const [rules, setRules] = useState<AutomationRule[]>([]);
+  const [loading, setLoading] = useState(false);
   const [newRule, setNewRule] = useState({
-    source_column_id: "",
-    target_column_id: "",
+    sourceColumnId: "",
+    targetColumnId: "",
   });
 
   useEffect(() => {
@@ -79,7 +80,7 @@ export function AutomationSettings({
   };
 
   const addRule = async () => {
-    if (!newRule.source_column_id || !newRule.target_column_id) {
+    if (!newRule.sourceColumnId || !newRule.targetColumnId) {
       toast({
         title: "Error",
         description: "Please select both source and target columns",
@@ -88,7 +89,7 @@ export function AutomationSettings({
       return;
     }
 
-    if (newRule.source_column_id === newRule.target_column_id) {
+    if (newRule.sourceColumnId === newRule.targetColumnId) {
       toast({
         title: "Error",
         description: "Source and target columns must be different",
@@ -97,11 +98,13 @@ export function AutomationSettings({
       return;
     }
 
+    setLoading(true);
     const { error } = await supabase.from("automation_rules").insert({
       board_id: boardId,
-      source_column_id: newRule.source_column_id,
-      target_column_id: newRule.target_column_id,
+      source_column_id: newRule.sourceColumnId,
+      target_column_id: newRule.targetColumnId,
       trigger_type: "due_date_reached",
+      enabled: true,
     });
 
     if (error) {
@@ -115,8 +118,32 @@ export function AutomationSettings({
         title: "Success",
         description: "Automation rule created",
       });
-      setNewRule({ source_column_id: "", target_column_id: "" });
+      setNewRule({ sourceColumnId: "", targetColumnId: "" });
       loadRules();
+      onRulesChange();
+    }
+    setLoading(false);
+  };
+
+  const deleteRule = async (ruleId: string) => {
+    const { error } = await supabase
+      .from("automation_rules")
+      .delete()
+      .eq("id", ruleId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete automation rule",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Automation rule deleted",
+      });
+      loadRules();
+      onRulesChange();
     }
   };
 
@@ -129,32 +156,12 @@ export function AutomationSettings({
     if (error) {
       toast({
         title: "Error",
-        description: "Failed to update rule",
+        description: "Failed to update automation rule",
         variant: "destructive",
       });
     } else {
       loadRules();
-    }
-  };
-
-  const deleteRule = async (ruleId: string) => {
-    const { error } = await supabase
-      .from("automation_rules")
-      .delete()
-      .eq("id", ruleId);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete rule",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Automation rule deleted",
-      });
-      loadRules();
+      onRulesChange();
     }
   };
 
@@ -171,63 +178,72 @@ export function AutomationSettings({
 
         <div className="space-y-6">
           <div>
-            <h3 className="text-sm font-medium mb-3">
-              Active Automation Rules
+            <h3 className="text-sm font-medium mb-4">
+              Automatic Task Movement Rules
             </h3>
-            {rules.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No automation rules configured yet.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {rules.map((rule) => (
-                  <div
-                    key={rule.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
-                  >
-                    <div className="flex items-center gap-3 flex-1">
-                      <Switch
-                        checked={rule.enabled}
-                        onCheckedChange={(checked) =>
-                          toggleRule(rule.id, checked)
-                        }
-                      />
-                      <div className="flex items-center gap-2 text-sm">
+            <p className="text-sm text-muted-foreground mb-4">
+              Configure rules to automatically move tasks between columns when
+              their due date is reached.
+            </p>
+
+            <div className="space-y-3">
+              {rules.map((rule) => (
+                <div
+                  key={rule.id}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
+                  <div className="flex items-center gap-3 flex-1">
+                    <Switch
+                      checked={rule.enabled}
+                      onCheckedChange={(enabled) => toggleRule(rule.id, enabled)}
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm">
+                        Move from{" "}
                         <span className="font-medium">
                           {getColumnName(rule.source_column_id)}
-                        </span>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        </span>{" "}
+                        to{" "}
                         <span className="font-medium">
                           {getColumnName(rule.target_column_id)}
                         </span>
-                        <span className="text-muted-foreground">
-                          when due date is reached
-                        </span>
-                      </div>
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        When due date is reached
+                      </p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteRule(rule.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
-                ))}
-              </div>
-            )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deleteRule(rule.id)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+
+              {rules.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No automation rules configured
+                </p>
+              )}
+            </div>
           </div>
 
-          <div className="border-t pt-6">
-            <h3 className="text-sm font-medium mb-3">Add New Rule</h3>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Source Column</Label>
+          <div className="border-t pt-4">
+            <h4 className="text-sm font-medium mb-3">Add New Rule</h4>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">
+                    From Column
+                  </Label>
                   <Select
-                    value={newRule.source_column_id}
+                    value={newRule.sourceColumnId}
                     onValueChange={(value) =>
-                      setNewRule({ ...newRule, source_column_id: value })
+                      setNewRule({ ...newRule, sourceColumnId: value })
                     }
                   >
                     <SelectTrigger>
@@ -242,13 +258,14 @@ export function AutomationSettings({
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="space-y-2">
-                  <Label>Target Column</Label>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">
+                    To Column
+                  </Label>
                   <Select
-                    value={newRule.target_column_id}
+                    value={newRule.targetColumnId}
                     onValueChange={(value) =>
-                      setNewRule({ ...newRule, target_column_id: value })
+                      setNewRule({ ...newRule, targetColumnId: value })
                     }
                   >
                     <SelectTrigger>
@@ -264,26 +281,14 @@ export function AutomationSettings({
                   </Select>
                 </div>
               </div>
-
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>When due date is reached in</span>
-                <span className="font-medium text-foreground">
-                  {newRule.source_column_id
-                    ? getColumnName(newRule.source_column_id)
-                    : "source"}
-                </span>
-                <ArrowRight className="h-4 w-4" />
-                <span>move to</span>
-                <span className="font-medium text-foreground">
-                  {newRule.target_column_id
-                    ? getColumnName(newRule.target_column_id)
-                    : "target"}
-                </span>
-              </div>
-
-              <Button onClick={addRule} className="w-full">
+              <Button
+                onClick={addRule}
+                disabled={loading}
+                className="w-full"
+                size="sm"
+              >
                 <Plus className="h-4 w-4 mr-2" />
-                Add Automation Rule
+                Add Rule
               </Button>
             </div>
           </div>

@@ -9,7 +9,8 @@ import { KanbanColumn } from "@/components/kanban/KanbanColumn";
 import { TaskDialog } from "@/components/kanban/TaskDialog";
 import { TaskEditDialog } from "@/components/kanban/TaskEditDialog";
 import { ColumnDialog } from "@/components/kanban/ColumnDialog";
-import { AutomationSettings } from "@/components/kanban/AutomationSettings";
+import { BoardSettingsDialog } from "@/components/kanban/BoardSettingsDialog";
+import { useAutomation } from "@/hooks/useAutomation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,7 +58,7 @@ export default function Board() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [columnDialogOpen, setColumnDialogOpen] = useState(false);
-  const [automationSettingsOpen, setAutomationSettingsOpen] = useState(false);
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [taskEditOpen, setTaskEditOpen] = useState(false);
@@ -77,17 +78,6 @@ export default function Board() {
     loadTasks();
   }, [boardId]);
 
-  useEffect(() => {
-    // Check and execute automation rules every minute
-    const interval = setInterval(() => {
-      executeAutomationRules();
-    }, 60000);
-
-    // Execute once on mount
-    executeAutomationRules();
-
-    return () => clearInterval(interval);
-  }, [boardId, tasks]);
 
   useEffect(() => {
     const taskId = searchParams.get('task');
@@ -182,6 +172,8 @@ export default function Board() {
     setTasks(tasksWithSubtasks);
   };
 
+  const { loadRules } = useAutomation(boardId, tasks, loadTasks);
+
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
   };
@@ -260,49 +252,6 @@ export default function Board() {
     setSearchParams({});
   };
 
-  const executeAutomationRules = async () => {
-    // Get all enabled automation rules for this board
-    const { data: rules, error: rulesError } = await supabase
-      .from("automation_rules")
-      .select("*")
-      .eq("board_id", boardId)
-      .eq("enabled", true);
-
-    if (rulesError || !rules || rules.length === 0) return;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Check each rule
-    for (const rule of rules) {
-      // Find tasks in source column with due dates that have passed
-      const tasksToMove = tasks.filter((task) => {
-        if (task.column_id !== rule.source_column_id) return false;
-        if (!task.due_date) return false;
-
-        const dueDate = new Date(task.due_date);
-        dueDate.setHours(0, 0, 0, 0);
-
-        return dueDate <= today;
-      });
-
-      // Move tasks to target column
-      for (const task of tasksToMove) {
-        await supabase
-          .from("tasks")
-          .update({ column_id: rule.target_column_id })
-          .eq("id", task.id);
-      }
-
-      if (tasksToMove.length > 0) {
-        toast({
-          title: "Automation",
-          description: `Moved ${tasksToMove.length} task(s) automatically`,
-        });
-        loadTasks();
-      }
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -321,10 +270,10 @@ export default function Board() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setAutomationSettingsOpen(true)}
+              onClick={() => setSettingsDialogOpen(true)}
             >
               <Settings className="w-4 h-4 mr-1.5" />
-              Automation
+              Settings
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -399,11 +348,12 @@ export default function Board() {
           existingColumnsCount={columns.length}
         />
 
-        <AutomationSettings
-          open={automationSettingsOpen}
-          onOpenChange={setAutomationSettingsOpen}
+        <BoardSettingsDialog
+          open={settingsDialogOpen}
+          onOpenChange={setSettingsDialogOpen}
           boardId={boardId!}
           columns={columns}
+          onRulesChange={loadRules}
         />
       </div>
     </div>
