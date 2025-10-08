@@ -41,6 +41,61 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_rules: {
+        Row: {
+          board_id: string
+          created_at: string
+          enabled: boolean
+          id: string
+          source_column_id: string
+          target_column_id: string
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          board_id: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          source_column_id: string
+          target_column_id: string
+          trigger_type?: string
+          updated_at?: string
+        }
+        Update: {
+          board_id?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          source_column_id?: string
+          target_column_id?: string
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_rules_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_rules_source_column_id_fkey"
+            columns: ["source_column_id"]
+            isOneToOne: false
+            referencedRelation: "columns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_rules_target_column_id_fkey"
+            columns: ["target_column_id"]
+            isOneToOne: false
+            referencedRelation: "columns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       boards: {
         Row: {
           created_at: string

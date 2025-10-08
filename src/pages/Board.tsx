@@ -3,12 +3,13 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, ChevronDown } from "lucide-react";
+import { ArrowLeft, ChevronDown, Settings } from "lucide-react";
 import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { KanbanColumn } from "@/components/kanban/KanbanColumn";
 import { TaskDialog } from "@/components/kanban/TaskDialog";
 import { TaskEditDialog } from "@/components/kanban/TaskEditDialog";
 import { ColumnDialog } from "@/components/kanban/ColumnDialog";
+import { AutomationSettings } from "@/components/kanban/AutomationSettings";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,6 +57,7 @@ export default function Board() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [columnDialogOpen, setColumnDialogOpen] = useState(false);
+  const [automationSettingsOpen, setAutomationSettingsOpen] = useState(false);
   const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [taskEditOpen, setTaskEditOpen] = useState(false);
@@ -74,6 +76,18 @@ export default function Board() {
     loadColumns();
     loadTasks();
   }, [boardId]);
+
+  useEffect(() => {
+    // Check and execute automation rules every minute
+    const interval = setInterval(() => {
+      executeAutomationRules();
+    }, 60000);
+
+    // Execute once on mount
+    executeAutomationRules();
+
+    return () => clearInterval(interval);
+  }, [boardId, tasks]);
 
   useEffect(() => {
     const taskId = searchParams.get('task');
@@ -246,6 +260,50 @@ export default function Board() {
     setSearchParams({});
   };
 
+  const executeAutomationRules = async () => {
+    // Get all enabled automation rules for this board
+    const { data: rules, error: rulesError } = await supabase
+      .from("automation_rules")
+      .select("*")
+      .eq("board_id", boardId)
+      .eq("enabled", true);
+
+    if (rulesError || !rules || rules.length === 0) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Check each rule
+    for (const rule of rules) {
+      // Find tasks in source column with due dates that have passed
+      const tasksToMove = tasks.filter((task) => {
+        if (task.column_id !== rule.source_column_id) return false;
+        if (!task.due_date) return false;
+
+        const dueDate = new Date(task.due_date);
+        dueDate.setHours(0, 0, 0, 0);
+
+        return dueDate <= today;
+      });
+
+      // Move tasks to target column
+      for (const task of tasksToMove) {
+        await supabase
+          .from("tasks")
+          .update({ column_id: rule.target_column_id })
+          .eq("id", task.id);
+      }
+
+      if (tasksToMove.length > 0) {
+        toast({
+          title: "Automation",
+          description: `Moved ${tasksToMove.length} task(s) automatically`,
+        });
+        loadTasks();
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-[calc(100vw-2rem)] mx-auto">
@@ -260,6 +318,14 @@ export default function Board() {
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAutomationSettingsOpen(true)}
+            >
+              <Settings className="w-4 h-4 mr-1.5" />
+              Automation
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
@@ -331,6 +397,13 @@ export default function Board() {
           boardId={boardId!}
           onColumnCreated={loadColumns}
           existingColumnsCount={columns.length}
+        />
+
+        <AutomationSettings
+          open={automationSettingsOpen}
+          onOpenChange={setAutomationSettingsOpen}
+          boardId={boardId!}
+          columns={columns}
         />
       </div>
     </div>
