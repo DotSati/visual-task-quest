@@ -5,10 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Trash2, Plus, Eye, FileEdit, Paperclip, Download, X } from "lucide-react";
+import { Trash2, Plus, Eye, FileEdit, Paperclip, Download, X, CalendarIcon } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { z } from "zod";
 
 const descriptionSchema = z.string().max(5000, "Description must be less than 5000 characters");
@@ -53,7 +57,9 @@ type TaskEditDialogProps = {
 export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditDialogProps) {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || "");
-  const [dueDate, setDueDate] = useState(task.due_date || "");
+  const [dueDate, setDueDate] = useState<Date | undefined>(
+    task.due_date ? new Date(task.due_date) : undefined
+  );
   const [color, setColor] = useState(task.color || "");
   const [boardColors, setBoardColors] = useState<string[]>([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
@@ -148,7 +154,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
       .update({
         title,
         description: description || null,
-        due_date: dueDate || null,
+        due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
         color: color || null
       })
       .eq("id", task.id);
@@ -435,13 +441,30 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
             </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="edit-due-date">Due Date</Label>
-            <Input
-              id="edit-due-date"
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-            />
+            <Label>Due Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !dueDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dueDate}
+                  onSelect={setDueDate}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="space-y-2">

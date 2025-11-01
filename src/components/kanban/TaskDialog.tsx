@@ -4,10 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Eye, FileEdit } from "lucide-react";
+import { CalendarIcon, Eye, FileEdit } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { z } from "zod";
 
 const descriptionSchema = z.string().max(5000, "Description must be less than 5000 characters");
@@ -22,7 +26,7 @@ type TaskDialogProps = {
 export function TaskDialog({ open, onOpenChange, columnId, onTaskCreated }: TaskDialogProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [dueDate, setDueDate] = useState("");
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [color, setColor] = useState("");
   const [boardColors, setBoardColors] = useState<string[]>([]);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -102,7 +106,7 @@ export function TaskDialog({ open, onOpenChange, columnId, onTaskCreated }: Task
         column_id: columnId,
         title,
         description: description || null,
-        due_date: dueDate || null,
+        due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
         color: color || null,
         position: newPosition
       });
@@ -120,7 +124,7 @@ export function TaskDialog({ open, onOpenChange, columnId, onTaskCreated }: Task
       });
       setTitle("");
       setDescription("");
-      setDueDate("");
+      setDueDate(undefined);
       setColor("");
       setIsPreviewMode(false);
       onOpenChange(false);
@@ -189,13 +193,30 @@ export function TaskDialog({ open, onOpenChange, columnId, onTaskCreated }: Task
             </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="task-due-date">Due Date</Label>
-            <Input
-              id="task-due-date"
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-            />
+            <Label>Due Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !dueDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dueDate}
+                  onSelect={setDueDate}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="space-y-2">
