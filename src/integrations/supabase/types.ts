@@ -310,10 +310,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_next_task_number: {
-        Args: { p_user_id: string }
-        Returns: number
-      }
+      get_next_task_number: { Args: { p_user_id: string }; Returns: number }
     }
     Enums: {
       [_ in never]: never
