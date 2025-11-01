@@ -84,6 +84,27 @@ export function KanbanColumn({
       return [...tasks].sort((a, b) => a.position - b.position);
     }
     
+    if (sortOrder === 'due_date_priority') {
+      return [...tasks].sort((a, b) => {
+        const aHasDate = !!a.due_date;
+        const bHasDate = !!b.due_date;
+        
+        // Tasks with due dates come first
+        if (aHasDate && !bHasDate) return -1;
+        if (!aHasDate && bHasDate) return 1;
+        
+        // Both have due dates - sort by date, then by task number
+        if (aHasDate && bHasDate) {
+          const dateCompare = new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime();
+          if (dateCompare !== 0) return dateCompare;
+          return (a.task_number ?? 0) - (b.task_number ?? 0);
+        }
+        
+        // Neither has due date - sort by task number
+        return (a.task_number ?? 0) - (b.task_number ?? 0);
+      });
+    }
+    
     return [...tasks].sort((a, b) => {
       const aNum = a.task_number ?? 0;
       const bNum = b.task_number ?? 0;
@@ -161,6 +182,10 @@ export function KanbanColumn({
               <DropdownMenuItem onClick={() => updateSortOrder('task_number_asc')}>
                 <ArrowUpDown className="mr-2 h-4 w-4" />
                 Task # (Ascending) {column.sort_order === 'task_number_asc' && '✓'}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => updateSortOrder('due_date_priority')}>
+                <ArrowUpDown className="mr-2 h-4 w-4" />
+                Due Date Priority {column.sort_order === 'due_date_priority' && '✓'}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => updateSortOrder('manual')}>
                 <ArrowUpDown className="mr-2 h-4 w-4" />
