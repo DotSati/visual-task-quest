@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState, useMemo } from "react";
+import { cn } from "@/lib/utils";
 
 type Column = {
   id: string;
@@ -71,7 +72,7 @@ export function KanbanColumn({
   onColumnUpdate,
   onTaskClick 
 }: KanbanColumnProps) {
-  const { setNodeRef } = useDroppable({
+  const { setNodeRef, isOver } = useDroppable({
     id: column.id,
   });
 
@@ -164,7 +165,10 @@ export function KanbanColumn({
     <>
       <div 
         ref={setNodeRef} 
-        className="flex flex-col bg-card rounded-lg p-3 min-w-[280px] max-w-[280px] border"
+        className={cn(
+          "flex flex-col bg-card rounded-lg p-3 min-w-[280px] max-w-[280px] border transition-all duration-200",
+          isOver && "bg-accent/50 ring-2 ring-primary/30 shadow-lg scale-[1.02]"
+        )}
       >
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-foreground">{column.title}</h3>

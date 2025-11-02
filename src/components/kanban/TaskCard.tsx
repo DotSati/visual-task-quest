@@ -51,7 +51,13 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id });
+  } = useSortable({ 
+    id: task.id,
+    transition: {
+      duration: 200,
+      easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+    },
+  });
 
   useEffect(() => {
     loadAttachmentCount();
@@ -93,7 +99,6 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
   };
 
   const completedSubtasks = task.subtasks?.filter(st => st.is_completed).length || 0;
@@ -108,7 +113,10 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
       }}
       {...attributes}
       {...listeners}
-      className="kanban-task"
+      className={cn(
+        "kanban-task cursor-grab active:cursor-grabbing transition-all duration-200",
+        isDragging && "opacity-50 scale-105 rotate-2 shadow-lg ring-2 ring-primary/20 z-50"
+      )}
       onClick={onClick}
     >
       <CardHeader className="p-2 pb-1.5">
