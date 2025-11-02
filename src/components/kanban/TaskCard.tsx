@@ -115,7 +115,7 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
       {...listeners}
       className={cn(
         "kanban-task cursor-grab active:cursor-grabbing transition-all duration-200",
-        isDragging && "opacity-50 scale-105 rotate-2 shadow-lg ring-2 ring-primary/20 z-50"
+        isDragging && "opacity-80 scale-110 shadow-2xl ring-2 ring-primary/30 z-50 -translate-y-2"
       )}
       onClick={onClick}
     >
