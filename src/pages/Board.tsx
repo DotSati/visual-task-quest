@@ -191,22 +191,30 @@ export default function Board() {
 
     if (!activeTask) return;
 
-    // Moving over another task
+    // Moving over another task in the same column
     if (overTask && activeTask.column_id === overTask.column_id) {
       const columnTasks = tasks.filter(t => t.column_id === activeTask.column_id);
       const oldIndex = columnTasks.findIndex(t => t.id === activeId);
       const newIndex = columnTasks.findIndex(t => t.id === overId);
 
       if (oldIndex !== newIndex) {
-        const newTasks = [...tasks];
-        const taskIndex = newTasks.findIndex(t => t.id === activeId);
-        newTasks.splice(taskIndex, 1);
-        const insertIndex = newTasks.findIndex(t => t.id === overId);
-        newTasks.splice(newIndex > oldIndex ? insertIndex + 1 : insertIndex, 0, activeTask);
-        setTasks(newTasks);
+        const reorderedTasks = [...columnTasks];
+        const [movedTask] = reorderedTasks.splice(oldIndex, 1);
+        reorderedTasks.splice(newIndex, 0, movedTask);
+        
+        const otherTasks = tasks.filter(t => t.column_id !== activeTask.column_id);
+        setTasks([...otherTasks, ...reorderedTasks]);
       }
     }
-    // Moving to a different column
+    // Moving over another task in a different column
+    else if (overTask && activeTask.column_id !== overTask.column_id) {
+      const targetColumnId = overTask.column_id;
+      const newTasks = tasks.map(t =>
+        t.id === activeId ? { ...t, column_id: targetColumnId } : t
+      );
+      setTasks(newTasks);
+    }
+    // Moving to an empty column or column header
     else if (overColumn && activeTask.column_id !== overColumn.id) {
       const newTasks = tasks.map(t =>
         t.id === activeId ? { ...t, column_id: overColumn.id } : t
@@ -222,21 +230,29 @@ export default function Board() {
     if (!over) return;
 
     const activeId = active.id as string;
-    const overId = over.id as string;
-
     const activeTask = tasks.find(t => t.id === activeId);
     if (!activeTask) return;
 
+    // Get all tasks in the target column and update their positions
     const columnTasks = tasks.filter(t => t.column_id === activeTask.column_id);
-    const newPosition = columnTasks.findIndex(t => t.id === activeId);
+    
+    // Update positions for all tasks in the column
+    const updates = columnTasks.map((task, index) => ({
+      id: task.id,
+      column_id: activeTask.column_id,
+      position: index
+    }));
 
-    await supabase
-      .from("tasks")
-      .update({
-        column_id: activeTask.column_id,
-        position: newPosition
-      })
-      .eq("id", activeId);
+    // Batch update all tasks
+    for (const update of updates) {
+      await supabase
+        .from("tasks")
+        .update({
+          column_id: update.column_id,
+          position: update.position
+        })
+        .eq("id", update.id);
+    }
 
     loadTasks();
   };
