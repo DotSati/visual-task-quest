@@ -61,6 +61,7 @@ interface KanbanColumnProps {
   onColumnDelete: () => void;
   onColumnUpdate: () => void;
   onTaskClick: (taskId: string) => void;
+  isHighlighted?: boolean;
 }
 
 export function KanbanColumn({ 
@@ -70,7 +71,8 @@ export function KanbanColumn({
   onTaskUpdate, 
   onColumnDelete,
   onColumnUpdate,
-  onTaskClick 
+  onTaskClick,
+  isHighlighted = false
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
@@ -167,7 +169,7 @@ export function KanbanColumn({
         ref={setNodeRef} 
         className={cn(
           "flex flex-col bg-card rounded-lg p-3 min-w-[280px] max-w-[280px] border transition-all duration-200",
-          isOver && "bg-primary/10 ring-2 ring-primary shadow-xl scale-[1.03] border-primary"
+          (isOver || isHighlighted) && "bg-primary/10 ring-2 ring-primary shadow-xl scale-[1.03] border-primary"
         )}
       >
         <div className="flex items-center justify-between mb-3">

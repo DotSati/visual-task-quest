@@ -62,6 +62,7 @@ export default function Board() {
   const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [taskEditOpen, setTaskEditOpen] = useState(false);
+  const [highlightedColumnId, setHighlightedColumnId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -180,7 +181,10 @@ export default function Board() {
 
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
-    if (!over) return;
+    if (!over) {
+      setHighlightedColumnId(null);
+      return;
+    }
 
     const activeId = active.id as string;
     const overId = over.id as string;
@@ -190,6 +194,13 @@ export default function Board() {
     const overColumn = columns.find(c => c.id === overId);
 
     if (!activeTask) return;
+
+    // Highlight the column we're over
+    if (overTask) {
+      setHighlightedColumnId(overTask.column_id);
+    } else if (overColumn) {
+      setHighlightedColumnId(overColumn.id);
+    }
 
     // Moving over another task in the same column
     if (overTask && activeTask.column_id === overTask.column_id) {
@@ -226,6 +237,7 @@ export default function Board() {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
+    setHighlightedColumnId(null);
 
     if (!over) return;
 
@@ -335,6 +347,7 @@ export default function Board() {
                 onTaskClick={(taskId) => {
                   setSearchParams({ task: taskId });
                 }}
+                isHighlighted={highlightedColumnId === column.id}
               />
             ))}
           </div>
