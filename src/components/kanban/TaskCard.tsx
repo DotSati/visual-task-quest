@@ -4,10 +4,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TaskEditDialog } from "./TaskEditDialog";
-import { Calendar, Paperclip } from "lucide-react";
+import { Calendar, Paperclip, MoreVertical, ArrowRightLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -43,6 +49,7 @@ type TaskCardProps = {
 export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
   const [attachmentCount, setAttachmentCount] = useState(0);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [boards, setBoards] = useState<any[]>([]);
   
   const {
     attributes,
@@ -61,6 +68,7 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
 
   useEffect(() => {
     loadAttachmentCount();
+    loadBoards();
   }, [task.id]);
 
   const loadAttachmentCount = async () => {
@@ -70,6 +78,59 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
       .eq("task_id", task.id);
     
     setAttachmentCount(count || 0);
+  };
+
+  const loadBoards = async () => {
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session?.user) return;
+
+    const { data, error } = await supabase
+      .from("boards")
+      .select("*")
+      .eq("user_id", session.session.user.id)
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setBoards(data);
+    }
+  };
+
+  const transferToBoard = async (targetBoardId: string) => {
+    // Get the first column of the target board
+    const { data: columns, error: columnsError } = await supabase
+      .from("columns")
+      .select("id")
+      .eq("board_id", targetBoardId)
+      .order("position")
+      .limit(1);
+
+    if (columnsError || !columns || columns.length === 0) {
+      toast({
+        title: "Error",
+        description: "Target board has no columns",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from("tasks")
+      .update({ column_id: columns[0].id, position: 0 })
+      .eq("id", task.id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to transfer task",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Task transferred successfully"
+      });
+      onUpdate();
+    }
   };
 
   const updateDueDate = async (date: Date | undefined) => {
@@ -114,7 +175,7 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
       {...attributes}
       {...listeners}
       className={cn(
-        "kanban-task cursor-grab active:cursor-grabbing transition-all duration-200",
+        "kanban-task cursor-grab active:cursor-grabbing transition-all duration-200 group",
         isDragging && "opacity-80 scale-110 shadow-2xl ring-2 ring-primary/30 z-50 -translate-y-2"
       )}
       onClick={onClick}
@@ -125,6 +186,31 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
             <span className="text-muted-foreground">#{task.task_number}</span>
           )}
           <span className="flex-1">{task.title}</span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <MoreVertical className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              {boards.map((board) => (
+                <DropdownMenuItem
+                  key={board.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    transferToBoard(board.id);
+                  }}
+                >
+                  <ArrowRightLeft className="mr-2 h-4 w-4" />
+                  Move to {board.title}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </CardTitle>
       </CardHeader>
       <CardContent className="p-2 pt-0 flex items-center gap-3 text-[11px]">
