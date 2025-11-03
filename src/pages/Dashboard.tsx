@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Plus, LogOut, Trash2 } from "lucide-react";
+import { Plus, LogOut, Trash2, Key } from "lucide-react";
 import { Session, User } from "@supabase/supabase-js";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ApiKeysDialog } from "@/components/ApiKeysDialog";
 
 type Board = {
   id: string;
@@ -26,6 +27,7 @@ export default function Dashboard() {
   const [boards, setBoards] = useState<Board[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [apiKeysDialogOpen, setApiKeysDialogOpen] = useState(false);
   const [newBoardTitle, setNewBoardTitle] = useState("");
   const [newBoardDescription, setNewBoardDescription] = useState("");
 
@@ -181,6 +183,14 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold gradient-text">My Boards</h1>
           <div className="flex gap-2">
             <ThemeToggle />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setApiKeysDialogOpen(true)}
+            >
+              <Key className="w-4 h-4 mr-2" />
+              API Keys
+            </Button>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button size="sm">
@@ -268,6 +278,11 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      <ApiKeysDialog
+        open={apiKeysDialogOpen}
+        onOpenChange={setApiKeysDialogOpen}
+      />
     </div>
   );
 }
