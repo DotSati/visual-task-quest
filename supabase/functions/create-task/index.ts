@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { apikey, board_id, column_id, title, description, due_date } = await req.json();
+    const { apikey, column_id, title, description, due_date } = await req.json();
 
     // Validate required fields
     if (!apikey) {
@@ -34,9 +34,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!board_id || !column_id) {
+    if (!column_id) {
       return new Response(
-        JSON.stringify({ error: 'board_id and column_id are required' }),
+        JSON.stringify({ error: 'column_id is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
       .from('api_keys')
       .select('user_id')
       .eq('key', apikey)
-      .single();
+      .maybeSingle();
 
     if (apiKeyError || !apiKeyData) {
       console.error('API key validation error:', apiKeyError);
@@ -69,35 +69,27 @@ Deno.serve(async (req) => {
       .update({ last_used_at: new Date().toISOString() })
       .eq('key', apikey);
 
-    // Verify user owns the board
-    const { data: boardData, error: boardError } = await supabase
-      .from('boards')
-      .select('id')
-      .eq('id', board_id)
-      .eq('user_id', apiKeyData.user_id)
-      .single();
-
-    if (boardError || !boardData) {
-      console.error('Board verification error:', boardError);
-      return new Response(
-        JSON.stringify({ error: 'Board not found or access denied' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Verify column belongs to the board
+    // Verify column exists and get its board_id
     const { data: columnData, error: columnError } = await supabase
       .from('columns')
-      .select('id')
+      .select('id, board_id, boards!inner(user_id)')
       .eq('id', column_id)
-      .eq('board_id', board_id)
-      .single();
+      .maybeSingle();
 
     if (columnError || !columnData) {
       console.error('Column verification error:', columnError);
       return new Response(
-        JSON.stringify({ error: 'Column not found in the specified board' }),
+        JSON.stringify({ error: 'Column not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify user owns the board that contains this column
+    const boardData = columnData.boards as any;
+    if (boardData.user_id !== apiKeyData.user_id) {
+      return new Response(
+        JSON.stringify({ error: 'Access denied to this column' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
