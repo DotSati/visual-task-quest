@@ -168,7 +168,7 @@ export function KanbanColumn({
       <div 
         ref={setNodeRef} 
         className={cn(
-          "flex flex-col bg-card rounded-lg p-3 min-w-[280px] max-w-[280px] border transition-all duration-200",
+          "flex flex-col bg-card rounded-lg p-3 border transition-all duration-200",
           (isOver || isHighlighted) && "bg-primary/10 ring-2 ring-primary shadow-xl scale-[1.03] border-primary"
         )}
       >

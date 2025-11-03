@@ -334,7 +334,10 @@ export default function Board() {
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-3 overflow-x-auto pb-4">
+          <div 
+            className="grid gap-3 overflow-x-auto pb-4"
+            style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}
+          >
             {columns.map((column) => (
               <KanbanColumn
                 key={column.id}
