@@ -50,6 +50,7 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
   const [attachmentCount, setAttachmentCount] = useState(0);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [boards, setBoards] = useState<any[]>([]);
+  const [currentBoardId, setCurrentBoardId] = useState<string | null>(null);
   
   const {
     attributes,
@@ -83,6 +84,17 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
   const loadBoards = async () => {
     const { data: session } = await supabase.auth.getSession();
     if (!session.session?.user) return;
+
+    // Get current board_id from the task's column
+    const { data: columnData } = await supabase
+      .from("columns")
+      .select("board_id")
+      .eq("id", task.column_id)
+      .single();
+
+    if (columnData) {
+      setCurrentBoardId(columnData.board_id);
+    }
 
     const { data, error } = await supabase
       .from("boards")
@@ -197,7 +209,7 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              {boards.map((board) => (
+              {boards.filter(board => board.id !== currentBoardId).map((board) => (
                 <DropdownMenuItem
                   key={board.id}
                   onClick={(e) => {
