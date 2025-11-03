@@ -9,11 +9,22 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TaskEditDialog } from "./TaskEditDialog";
-import { Calendar, Paperclip, MoreVertical, ArrowRightLeft } from "lucide-react";
+import { Calendar, Paperclip, MoreVertical, ArrowRightLeft, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -51,6 +62,7 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [boards, setBoards] = useState<any[]>([]);
   const [currentBoardId, setCurrentBoardId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
   const {
     attributes,
@@ -145,6 +157,28 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
     }
   };
 
+  const deleteTask = async () => {
+    const { error } = await supabase
+      .from("tasks")
+      .delete()
+      .eq("id", task.id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete task",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Task deleted"
+      });
+      setDeleteDialogOpen(false);
+      onUpdate();
+    }
+  };
+
   const updateDueDate = async (date: Date | undefined) => {
     const { error } = await supabase
       .from("tasks")
@@ -178,6 +212,7 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
   const totalSubtasks = task.subtasks?.length || 0;
 
   return (
+    <>
     <Card
       ref={setNodeRef}
       style={{
@@ -221,6 +256,17 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
                   Move to {board.title}
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeleteDialogOpen(true);
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Task
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </CardTitle>
@@ -287,5 +333,29 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
         )}
       </CardContent>
     </Card>
+    
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Task</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete this task? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteTask();
+            }}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </>
   );
 }
