@@ -24,7 +24,7 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TaskEditDialog } from "./TaskEditDialog";
-import { Calendar, Paperclip, MoreVertical, ArrowRightLeft, Trash2 } from "lucide-react";
+import { Calendar, Paperclip, MoreVertical, ArrowRightLeft, Trash2, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -59,6 +59,7 @@ type TaskCardProps = {
 
 export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
   const [attachmentCount, setAttachmentCount] = useState(0);
+  const [commentCount, setCommentCount] = useState(0);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [boards, setBoards] = useState<any[]>([]);
   const [currentBoardId, setCurrentBoardId] = useState<string | null>(null);
@@ -81,6 +82,7 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
 
   useEffect(() => {
     loadAttachmentCount();
+    loadCommentCount();
     loadBoards();
   }, [task.id]);
 
@@ -91,6 +93,15 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
       .eq("task_id", task.id);
     
     setAttachmentCount(count || 0);
+  };
+
+  const loadCommentCount = async () => {
+    const { count } = await supabase
+      .from("task_comments")
+      .select("*", { count: 'exact', head: true })
+      .eq("task_id", task.id);
+    
+    setCommentCount(count || 0);
   };
 
   const loadBoards = async () => {
@@ -329,6 +340,12 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
           <div className="flex items-center gap-1 text-muted-foreground">
             <Paperclip className="w-3 h-3" />
             <span>{attachmentCount}</span>
+          </div>
+        )}
+        {commentCount > 0 && (
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <MessageSquare className="w-3 h-3" />
+            <span>{commentCount}</span>
           </div>
         )}
       </CardContent>
