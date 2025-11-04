@@ -1,6 +1,6 @@
 import { useDroppable } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
-import { Plus, MoreVertical, Trash2, ArrowUpDown } from "lucide-react";
+import { Plus, MoreVertical, Trash2, ArrowUpDown, Edit, Copy } from "lucide-react";
 import { TaskCard } from "./TaskCard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -21,6 +21,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 
@@ -79,6 +89,8 @@ export function KanbanColumn({
   });
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(column.title);
 
   const sortedTasks = useMemo(() => {
     const sortOrder = column.sort_order || 'task_number_desc';
@@ -163,6 +175,45 @@ export function KanbanColumn({
     }
   };
 
+  const updateColumnTitle = async () => {
+    if (!editedTitle.trim()) {
+      toast({
+        title: "Error",
+        description: "Column title cannot be empty",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from("columns")
+      .update({ title: editedTitle })
+      .eq("id", column.id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update column",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Column updated"
+      });
+      onColumnUpdate();
+      setEditDialogOpen(false);
+    }
+  };
+
+  const copyColumnId = () => {
+    navigator.clipboard.writeText(column.id);
+    toast({
+      title: "Copied",
+      description: "Column ID copied to clipboard"
+    });
+  };
+
   return (
     <>
       <div 
@@ -181,6 +232,11 @@ export function KanbanColumn({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setEditDialogOpen(true)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Column
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => updateSortOrder('task_number_desc')}>
                 <ArrowUpDown className="mr-2 h-4 w-4" />
                 Task # (Descending) {column.sort_order === 'task_number_desc' && '✓'}
@@ -242,6 +298,55 @@ export function KanbanColumn({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Column</DialogTitle>
+            <DialogDescription>
+              Update the column name and view its ID
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="column-title">Column Name</Label>
+              <Input
+                id="column-title"
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                placeholder="Enter column name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="column-id">Column ID</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="column-id"
+                  value={column.id}
+                  readOnly
+                  className="font-mono text-sm"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={copyColumnId}
+                  type="button"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={updateColumnTitle}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
