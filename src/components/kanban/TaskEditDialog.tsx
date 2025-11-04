@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Trash2, Plus, Eye, FileEdit, Paperclip, Download, X, CalendarIcon } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { TaskComments } from "./TaskComments";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
@@ -592,6 +593,10 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
               />
               {isUploading && <p className="text-xs text-muted-foreground mt-1">Uploading...</p>}
             </div>
+          </div>
+
+          <div className="border-t pt-4">
+            <TaskComments taskId={task.id} />
           </div>
 
           <div className="flex gap-2">
