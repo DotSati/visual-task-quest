@@ -9,7 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Trash2, Plus, Eye, FileEdit, Paperclip, Download, X, CalendarIcon } from "lucide-react";
+import { Trash2, Plus, Eye, FileEdit, Paperclip, Download, X, CalendarIcon, Tag } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { TaskComments } from "./TaskComments";
 import { format } from "date-fns";
@@ -45,6 +45,7 @@ type Task = {
   column_id: string;
   task_number: number | null;
   color: string | null;
+  tags?: string[];
   subtasks?: Subtask[];
 };
 
@@ -67,6 +68,8 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [tags, setTags] = useState<string[]>(task.tags || []);
+  const [tagInput, setTagInput] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -156,7 +159,8 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
         title,
         description: description || null,
         due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
-        color: color || null
+        color: color || null,
+        tags
       })
       .eq("id", task.id);
 
@@ -172,6 +176,25 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
         description: "Task updated"
       });
       onUpdate();
+    }
+  };
+
+  const addTag = () => {
+    const trimmedTag = tagInput.trim();
+    if (trimmedTag && !tags.includes(trimmedTag)) {
+      setTags([...tags, trimmedTag]);
+      setTagInput("");
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addTag();
     }
   };
 
@@ -513,6 +536,40 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Tags</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add a tag..."
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+              />
+              <Button type="button" size="sm" onClick={addTag}>
+                <Tag className="h-4 w-4 mr-1" />
+                Add
+              </Button>
+            </div>
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {tags.map((tag) => (
+                  <div
+                    key={tag}
+                    className="bg-secondary text-secondary-foreground px-2 py-1 rounded-md text-sm flex items-center gap-1"
+                  >
+                    {tag}
+                    <button
+                      onClick={() => removeTag(tag)}
+                      className="hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

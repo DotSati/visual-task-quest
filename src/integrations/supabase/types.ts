@@ -327,6 +327,7 @@ export type Database = {
           due_date: string | null
           id: string
           position: number
+          tags: string[] | null
           task_number: number | null
           title: string
           updated_at: string
@@ -339,6 +340,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           position: number
+          tags?: string[] | null
           task_number?: number | null
           title: string
           updated_at?: string
@@ -351,6 +353,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           position?: number
+          tags?: string[] | null
           task_number?: number | null
           title?: string
           updated_at?: string

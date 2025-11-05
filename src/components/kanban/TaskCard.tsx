@@ -48,6 +48,7 @@ type Task = {
   column_id: string;
   task_number: number | null;
   color: string | null;
+  tags?: string[];
   subtasks?: Subtask[];
 };
 
@@ -282,7 +283,20 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
           </DropdownMenu>
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-2 pt-0 flex items-center gap-3 text-[11px]">
+      <CardContent className="p-2 pt-0 space-y-2">
+        {task.tags && task.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {task.tags.map((tag) => (
+              <span
+                key={tag}
+                className="bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded text-[10px]"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center gap-3 text-[11px]">
         <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
           <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
             <Button
@@ -348,6 +362,7 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
             <span>{commentCount}</span>
           </div>
         )}
+        </div>
       </CardContent>
     </Card>
     
