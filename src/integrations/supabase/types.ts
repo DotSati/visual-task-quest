@@ -258,6 +258,30 @@ export type Database = {
           },
         ]
       }
+      tags: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       task_attachments: {
         Row: {
           created_at: string
@@ -318,6 +342,42 @@ export type Database = {
         }
         Relationships: []
       }
+      task_tags: {
+        Row: {
+          created_at: string | null
+          id: string
+          tag_id: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          tag_id: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          tag_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_tags_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           color: string | null
@@ -327,7 +387,6 @@ export type Database = {
           due_date: string | null
           id: string
           position: number
-          tags: string[] | null
           task_number: number | null
           title: string
           updated_at: string
@@ -340,7 +399,6 @@ export type Database = {
           due_date?: string | null
           id?: string
           position: number
-          tags?: string[] | null
           task_number?: number | null
           title: string
           updated_at?: string
@@ -353,7 +411,6 @@ export type Database = {
           due_date?: string | null
           id?: string
           position?: number
-          tags?: string[] | null
           task_number?: number | null
           title?: string
           updated_at?: string

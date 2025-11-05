@@ -39,6 +39,12 @@ type Subtask = {
   task_id: string;
 };
 
+type Tag = {
+  id: string;
+  name: string;
+  color: string | null;
+};
+
 type Task = {
   id: string;
   title: string;
@@ -48,7 +54,6 @@ type Task = {
   column_id: string;
   task_number: number | null;
   color: string | null;
-  tags?: string[];
   subtasks?: Subtask[];
 };
 
@@ -65,6 +70,7 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
   const [boards, setBoards] = useState<any[]>([]);
   const [currentBoardId, setCurrentBoardId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [tags, setTags] = useState<Tag[]>([]);
   
   const {
     attributes,
@@ -85,6 +91,7 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
     loadAttachmentCount();
     loadCommentCount();
     loadBoards();
+    loadTags();
   }, [task.id]);
 
   const loadAttachmentCount = async () => {
@@ -103,6 +110,18 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
       .eq("task_id", task.id);
     
     setCommentCount(count || 0);
+  };
+
+  const loadTags = async () => {
+    const { data, error } = await supabase
+      .from("task_tags")
+      .select("tags(id, name, color)")
+      .eq("task_id", task.id);
+
+    if (!error && data) {
+      const taskTags = data.map((tt: any) => tt.tags).filter(Boolean);
+      setTags(taskTags);
+    }
   };
 
   const loadBoards = async () => {
@@ -284,14 +303,15 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-2 pt-0 space-y-2">
-        {task.tags && task.tags.length > 0 && (
+        {tags && tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
-            {task.tags.map((tag) => (
+            {tags.map((tag) => (
               <span
-                key={tag}
+                key={tag.id}
                 className="bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded text-[10px]"
+                style={tag.color ? { backgroundColor: tag.color, color: 'white' } : undefined}
               >
-                {tag}
+                {tag.name}
               </span>
             ))}
           </div>

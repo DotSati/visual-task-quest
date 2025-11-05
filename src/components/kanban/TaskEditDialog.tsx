@@ -36,6 +36,12 @@ type Attachment = {
   created_at: string;
 };
 
+type Tag = {
+  id: string;
+  name: string;
+  color: string | null;
+};
+
 type Task = {
   id: string;
   title: string;
@@ -45,7 +51,6 @@ type Task = {
   column_id: string;
   task_number: number | null;
   color: string | null;
-  tags?: string[];
   subtasks?: Subtask[];
 };
 
@@ -68,13 +73,16 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [tags, setTags] = useState<string[]>(task.tags || []);
+  const [taskTags, setTaskTags] = useState<Tag[]>([]);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [tagInput, setTagInput] = useState("");
 
   useEffect(() => {
     if (open) {
       loadAttachments();
       loadBoardColors();
+      loadTaskTags();
+      loadAvailableTags();
     }
   }, [open, task.id]);
 
@@ -141,6 +149,33 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
     }
   };
 
+  const loadTaskTags = async () => {
+    const { data, error } = await supabase
+      .from("task_tags")
+      .select("tag_id, tags(id, name, color)")
+      .eq("task_id", task.id);
+
+    if (!error && data) {
+      const tags = data.map((tt: any) => tt.tags).filter(Boolean);
+      setTaskTags(tags);
+    }
+  };
+
+  const loadAvailableTags = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("tags")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("name");
+
+    if (!error && data) {
+      setAvailableTags(data);
+    }
+  };
+
   const updateTask = async () => {
     // Validate description
     const validation = descriptionSchema.safeParse(description);
@@ -159,8 +194,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
         title,
         description: description || null,
         due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
-        color: color || null,
-        tags
+        color: color || null
       })
       .eq("id", task.id);
 
@@ -179,22 +213,83 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
     }
   };
 
-  const addTag = () => {
+  const addOrSelectTag = async () => {
     const trimmedTag = tagInput.trim();
-    if (trimmedTag && !tags.includes(trimmedTag)) {
-      setTags([...tags, trimmedTag]);
+    if (!trimmedTag) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Check if tag already exists for this user
+    let existingTag = availableTags.find(
+      (t) => t.name.toLowerCase() === trimmedTag.toLowerCase()
+    );
+
+    if (!existingTag) {
+      // Create new tag
+      const { data, error } = await supabase
+        .from("tags")
+        .insert({ user_id: user.id, name: trimmedTag })
+        .select()
+        .single();
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to create tag",
+          variant: "destructive"
+        });
+        return;
+      }
+      existingTag = data;
+      setAvailableTags([...availableTags, data]);
+    }
+
+    // Check if task already has this tag
+    if (taskTags.some((t) => t.id === existingTag!.id)) {
+      setTagInput("");
+      return;
+    }
+
+    // Link tag to task
+    const { error } = await supabase
+      .from("task_tags")
+      .insert({ task_id: task.id, tag_id: existingTag.id });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add tag to task",
+        variant: "destructive"
+      });
+    } else {
+      setTaskTags([...taskTags, existingTag]);
       setTagInput("");
     }
   };
 
-  const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
+  const removeTag = async (tagId: string) => {
+    const { error } = await supabase
+      .from("task_tags")
+      .delete()
+      .eq("task_id", task.id)
+      .eq("tag_id", tagId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove tag",
+        variant: "destructive"
+      });
+    } else {
+      setTaskTags(taskTags.filter((t) => t.id !== tagId));
+    }
   };
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      addTag();
+      addOrSelectTag();
     }
   };
 
@@ -542,26 +637,33 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
             <Label>Tags</Label>
             <div className="flex gap-2">
               <Input
-                placeholder="Add a tag..."
+                placeholder="Type tag name..."
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={handleTagKeyDown}
+                list="available-tags"
               />
-              <Button type="button" size="sm" onClick={addTag}>
+              <datalist id="available-tags">
+                {availableTags.map((tag) => (
+                  <option key={tag.id} value={tag.name} />
+                ))}
+              </datalist>
+              <Button type="button" size="sm" onClick={addOrSelectTag}>
                 <Tag className="h-4 w-4 mr-1" />
                 Add
               </Button>
             </div>
-            {tags.length > 0 && (
+            {taskTags.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
-                {tags.map((tag) => (
+                {taskTags.map((tag) => (
                   <div
-                    key={tag}
+                    key={tag.id}
                     className="bg-secondary text-secondary-foreground px-2 py-1 rounded-md text-sm flex items-center gap-1"
+                    style={tag.color ? { backgroundColor: tag.color, color: 'white' } : undefined}
                   >
-                    {tag}
+                    {tag.name}
                     <button
-                      onClick={() => removeTag(tag)}
+                      onClick={() => removeTag(tag.id)}
                       className="hover:text-destructive"
                     >
                       <X className="h-3 w-3" />
