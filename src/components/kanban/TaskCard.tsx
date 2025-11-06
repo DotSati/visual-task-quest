@@ -48,6 +48,7 @@ type Tag = {
 type Assignee = {
   id: string;
   user_id: string;
+  email?: string;
 };
 
 type Task = {
@@ -134,11 +135,16 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
   const loadAssignees = async () => {
     const { data, error } = await supabase
       .from("task_assignees")
-      .select("id, user_id")
+      .select("id, user_id, profiles(email)")
       .eq("task_id", task.id);
 
     if (!error && data) {
-      setAssignees(data);
+      const assigneesWithEmail = data.map((assignee: any) => ({
+        id: assignee.id,
+        user_id: assignee.user_id,
+        email: assignee.profiles?.email
+      }));
+      setAssignees(assigneesWithEmail);
     }
   };
 

@@ -45,6 +45,7 @@ type Tag = {
 type Assignee = {
   id: string;
   user_id: string;
+  email?: string;
 };
 
 type Task = {
@@ -304,23 +305,29 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
   const loadAssignees = async () => {
     const { data, error } = await supabase
       .from("task_assignees")
-      .select("id, user_id")
+      .select("id, user_id, profiles(email)")
       .eq("task_id", task.id);
 
     if (!error && data) {
-      setAssignees(data);
+      const assigneesWithEmail = data.map((assignee: any) => ({
+        id: assignee.id,
+        user_id: assignee.user_id,
+        email: assignee.profiles?.email
+      }));
+      setAssignees(assigneesWithEmail);
     }
   };
 
   const addAssignee = async () => {
-    const email = assigneeEmail.trim();
+    const email = assigneeEmail.trim().toLowerCase();
     if (!email) return;
 
-    // Get user by email from auth.users (through profiles)
-    const { data: users, error: userError } = await supabase
+    // Look up user by email in profiles
+    const { data: profile, error: userError } = await supabase
       .from("profiles")
-      .select("id")
-      .limit(1);
+      .select("id, email")
+      .eq("email", email)
+      .maybeSingle();
 
     if (userError) {
       toast({
@@ -331,13 +338,17 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
       return;
     }
 
-    // For now, we'll use the current user's ID as a placeholder
-    // In a real app, you'd need to look up users by email
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!profile) {
+      toast({
+        title: "User not found",
+        description: "No user found with that email address",
+        variant: "destructive"
+      });
+      return;
+    }
 
     // Check if already assigned
-    if (assignees.some((a) => a.user_id === user.id)) {
+    if (assignees.some((a) => a.user_id === profile.id)) {
       toast({
         title: "Already assigned",
         description: "This user is already assigned to the task"
@@ -348,8 +359,8 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
 
     const { data, error } = await supabase
       .from("task_assignees")
-      .insert({ task_id: task.id, user_id: user.id })
-      .select()
+      .insert({ task_id: task.id, user_id: profile.id })
+      .select("id, user_id")
       .single();
 
     if (error) {
@@ -359,11 +370,11 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
         variant: "destructive"
       });
     } else {
-      setAssignees([...assignees, data]);
+      setAssignees([...assignees, { ...data, email: profile.email }]);
       setAssigneeEmail("");
       toast({
         title: "Success",
-        description: "User assigned to task"
+        description: `${profile.email} assigned to task`
       });
     }
   };
@@ -774,7 +785,8 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
             <Label>Assigned People</Label>
             <div className="flex gap-2">
               <Input
-                placeholder="Assign yourself for now..."
+                type="email"
+                placeholder="Enter user email..."
                 value={assigneeEmail}
                 onChange={(e) => setAssigneeEmail(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addAssignee())}
@@ -792,7 +804,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
                     className="bg-accent text-accent-foreground px-2 py-1 rounded-md text-sm flex items-center gap-1"
                   >
                     <User className="h-3 w-3" />
-                    User {assignee.user_id.slice(0, 8)}
+                    {assignee.email || `User ${assignee.user_id.slice(0, 8)}`}
                     <button
                       onClick={() => removeAssignee(assignee.id)}
                       className="hover:text-destructive"
