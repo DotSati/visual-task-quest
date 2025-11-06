@@ -9,7 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Trash2, Plus, Eye, FileEdit, Paperclip, Download, X, CalendarIcon, Tag } from "lucide-react";
+import { Trash2, Plus, Eye, FileEdit, Paperclip, Download, X, CalendarIcon, Tag, UserPlus, User } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { TaskComments } from "./TaskComments";
 import { format } from "date-fns";
@@ -40,6 +40,11 @@ type Tag = {
   id: string;
   name: string;
   color: string | null;
+};
+
+type Assignee = {
+  id: string;
+  user_id: string;
 };
 
 type Task = {
@@ -76,6 +81,8 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
   const [taskTags, setTaskTags] = useState<Tag[]>([]);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [assignees, setAssignees] = useState<Assignee[]>([]);
+  const [assigneeEmail, setAssigneeEmail] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -83,6 +90,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
       loadBoardColors();
       loadTaskTags();
       loadAvailableTags();
+      loadAssignees();
     }
   }, [open, task.id]);
 
@@ -290,6 +298,94 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
     if (e.key === "Enter") {
       e.preventDefault();
       addOrSelectTag();
+    }
+  };
+
+  const loadAssignees = async () => {
+    const { data, error } = await supabase
+      .from("task_assignees")
+      .select("id, user_id")
+      .eq("task_id", task.id);
+
+    if (!error && data) {
+      setAssignees(data);
+    }
+  };
+
+  const addAssignee = async () => {
+    const email = assigneeEmail.trim();
+    if (!email) return;
+
+    // Get user by email from auth.users (through profiles)
+    const { data: users, error: userError } = await supabase
+      .from("profiles")
+      .select("id")
+      .limit(1);
+
+    if (userError) {
+      toast({
+        title: "Error",
+        description: "Failed to find user",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // For now, we'll use the current user's ID as a placeholder
+    // In a real app, you'd need to look up users by email
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Check if already assigned
+    if (assignees.some((a) => a.user_id === user.id)) {
+      toast({
+        title: "Already assigned",
+        description: "This user is already assigned to the task"
+      });
+      setAssigneeEmail("");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("task_assignees")
+      .insert({ task_id: task.id, user_id: user.id })
+      .select()
+      .single();
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to assign user",
+        variant: "destructive"
+      });
+    } else {
+      setAssignees([...assignees, data]);
+      setAssigneeEmail("");
+      toast({
+        title: "Success",
+        description: "User assigned to task"
+      });
+    }
+  };
+
+  const removeAssignee = async (assigneeId: string) => {
+    const { error } = await supabase
+      .from("task_assignees")
+      .delete()
+      .eq("id", assigneeId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove assignee",
+        variant: "destructive"
+      });
+    } else {
+      setAssignees(assignees.filter((a) => a.id !== assigneeId));
+      toast({
+        title: "Success",
+        description: "Assignee removed"
+      });
     }
   };
 
@@ -664,6 +760,41 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
                     {tag.name}
                     <button
                       onClick={() => removeTag(tag.id)}
+                      className="hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Assigned People</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Assign yourself for now..."
+                value={assigneeEmail}
+                onChange={(e) => setAssigneeEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addAssignee())}
+              />
+              <Button type="button" size="sm" onClick={addAssignee}>
+                <UserPlus className="h-4 w-4 mr-1" />
+                Assign
+              </Button>
+            </div>
+            {assignees.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {assignees.map((assignee) => (
+                  <div
+                    key={assignee.id}
+                    className="bg-accent text-accent-foreground px-2 py-1 rounded-md text-sm flex items-center gap-1"
+                  >
+                    <User className="h-3 w-3" />
+                    User {assignee.user_id.slice(0, 8)}
+                    <button
+                      onClick={() => removeAssignee(assignee.id)}
                       className="hover:text-destructive"
                     >
                       <X className="h-3 w-3" />

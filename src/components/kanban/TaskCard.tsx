@@ -24,7 +24,7 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TaskEditDialog } from "./TaskEditDialog";
-import { Calendar, Paperclip, MoreVertical, ArrowRightLeft, Trash2, MessageSquare } from "lucide-react";
+import { Calendar, Paperclip, MoreVertical, ArrowRightLeft, Trash2, MessageSquare, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -43,6 +43,11 @@ type Tag = {
   id: string;
   name: string;
   color: string | null;
+};
+
+type Assignee = {
+  id: string;
+  user_id: string;
 };
 
 type Task = {
@@ -71,6 +76,7 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
   const [currentBoardId, setCurrentBoardId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [assignees, setAssignees] = useState<Assignee[]>([]);
   
   const {
     attributes,
@@ -92,6 +98,7 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
     loadCommentCount();
     loadBoards();
     loadTags();
+    loadAssignees();
   }, [task.id]);
 
   const loadAttachmentCount = async () => {
@@ -121,6 +128,17 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
     if (!error && data) {
       const taskTags = data.map((tt: any) => tt.tags).filter(Boolean);
       setTags(taskTags);
+    }
+  };
+
+  const loadAssignees = async () => {
+    const { data, error } = await supabase
+      .from("task_assignees")
+      .select("id, user_id")
+      .eq("task_id", task.id);
+
+    if (!error && data) {
+      setAssignees(data);
     }
   };
 
@@ -314,6 +332,14 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
                 {tag.name}
               </span>
             ))}
+          </div>
+        )}
+        {assignees && assignees.length > 0 && (
+          <div className="flex items-center gap-1">
+            <User className="w-3 h-3 text-muted-foreground" />
+            <span className="text-[10px] text-muted-foreground">
+              {assignees.length} assigned
+            </span>
           </div>
         )}
         <div className="flex items-center gap-3 text-[11px]">
