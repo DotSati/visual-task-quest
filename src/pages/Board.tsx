@@ -148,6 +148,7 @@ export default function Board() {
         columns!inner(board_id)
       `)
       .eq("columns.board_id", boardId)
+      .eq("hidden", false)
       .order("position");
 
     if (tasksError) {

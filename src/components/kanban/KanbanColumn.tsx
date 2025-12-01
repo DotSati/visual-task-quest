@@ -1,6 +1,6 @@
 import { useDroppable } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
-import { Plus, MoreVertical, Trash2, ArrowUpDown, Edit, Copy } from "lucide-react";
+import { Plus, MoreVertical, Trash2, ArrowUpDown, Edit, Copy, EyeOff } from "lucide-react";
 import { TaskCard } from "./TaskCard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -214,6 +214,36 @@ export function KanbanColumn({
     });
   };
 
+  const hideAllTasks = async () => {
+    if (tasks.length === 0) {
+      toast({
+        title: "No tasks",
+        description: "There are no tasks to hide",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from("tasks")
+      .update({ hidden: true })
+      .in("id", tasks.map(t => t.id));
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to hide tasks",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: `Hidden ${tasks.length} task${tasks.length === 1 ? '' : 's'}`
+      });
+      onTaskUpdate();
+    }
+  };
+
   return (
     <>
       <div 
@@ -252,6 +282,11 @@ export function KanbanColumn({
               <DropdownMenuItem onClick={() => updateSortOrder('manual')}>
                 <ArrowUpDown className="mr-2 h-4 w-4" />
                 Manual Order {column.sort_order === 'manual' && '✓'}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={hideAllTasks}>
+                <EyeOff className="mr-2 h-4 w-4" />
+                Hide All Tasks
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem

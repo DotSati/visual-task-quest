@@ -424,6 +424,7 @@ export type Database = {
           created_at: string
           description: string | null
           due_date: string | null
+          hidden: boolean
           id: string
           position: number
           task_number: number | null
@@ -436,6 +437,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
+          hidden?: boolean
           id?: string
           position: number
           task_number?: number | null
@@ -448,6 +450,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
+          hidden?: boolean
           id?: string
           position?: number
           task_number?: number | null
