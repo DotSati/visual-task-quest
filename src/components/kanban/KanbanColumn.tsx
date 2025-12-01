@@ -1,9 +1,11 @@
 import { useDroppable } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
-import { Plus, MoreVertical, Trash2, ArrowUpDown, Edit, Copy, EyeOff } from "lucide-react";
+import { Plus, MoreVertical, Trash2, ArrowUpDown, Edit, Copy, EyeOff, Eye } from "lucide-react";
 import { TaskCard } from "./TaskCard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { useState, useMemo, useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,7 +33,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 
 type Column = {
@@ -60,6 +61,7 @@ type Task = {
   column_id: string;
   task_number: number | null;
   color: string | null;
+  hidden?: boolean;
   subtasks?: Subtask[];
 };
 
@@ -91,16 +93,81 @@ export function KanbanColumn({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editedTitle, setEditedTitle] = useState(column.title);
+  const [showHidden, setShowHidden] = useState(false);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const [hiddenCount, setHiddenCount] = useState(0);
+
+  // Load all tasks including hidden ones to get the count
+  const loadHiddenTasksCount = async () => {
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("column_id", column.id)
+      .eq("hidden", true);
+
+    if (!error && data) {
+      setHiddenCount(data.length);
+    }
+  };
+
+  // Load all tasks when showing hidden
+  const loadAllTasks = async () => {
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("column_id", column.id)
+      .order("position");
+
+    if (!error && data) {
+      setAllTasks(data);
+    }
+  };
+
+  // Update when tasks or column changes
+  useEffect(() => {
+    loadHiddenTasksCount();
+    if (showHidden) {
+      loadAllTasks();
+    }
+  }, [column.id, tasks, showHidden]);
+
+  const displayTasks = showHidden ? allTasks : tasks;
+
+  const unhideTask = async (taskId: string) => {
+    const { error } = await supabase
+      .from("tasks")
+      .update({ hidden: false })
+      .eq("id", taskId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to unhide task",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Task unhidden"
+      });
+      onTaskUpdate();
+      loadHiddenTasksCount();
+      if (showHidden) {
+        loadAllTasks();
+      }
+    }
+  };
 
   const sortedTasks = useMemo(() => {
     const sortOrder = column.sort_order || 'task_number_desc';
+    const tasksToSort = displayTasks;
     
     if (sortOrder === 'manual') {
-      return [...tasks].sort((a, b) => a.position - b.position);
+      return [...tasksToSort].sort((a, b) => a.position - b.position);
     }
     
     if (sortOrder === 'due_date_priority') {
-      return [...tasks].sort((a, b) => {
+      return [...tasksToSort].sort((a, b) => {
         const aHasDate = !!a.due_date;
         const bHasDate = !!b.due_date;
         
@@ -115,12 +182,12 @@ export function KanbanColumn({
           return (a.task_number ?? 0) - (b.task_number ?? 0);
         }
         
-        // Neither has due date - sort by task number
+      // Neither has due date - sort by task number
         return (a.task_number ?? 0) - (b.task_number ?? 0);
       });
     }
     
-    return [...tasks].sort((a, b) => {
+    return [...tasksToSort].sort((a, b) => {
       const aNum = a.task_number ?? 0;
       const bNum = b.task_number ?? 0;
       
@@ -130,7 +197,7 @@ export function KanbanColumn({
         return aNum - bNum;
       }
     });
-  }, [tasks, column.sort_order]);
+  }, [displayTasks, column.sort_order]);
 
   const updateSortOrder = async (sortOrder: string) => {
     const { error } = await supabase
@@ -241,7 +308,15 @@ export function KanbanColumn({
         description: `Hidden ${tasks.length} task${tasks.length === 1 ? '' : 's'}`
       });
       onTaskUpdate();
+      loadHiddenTasksCount();
     }
+  };
+
+  const toggleShowHidden = () => {
+    if (!showHidden) {
+      loadAllTasks();
+    }
+    setShowHidden(!showHidden);
   };
 
   return (
@@ -254,8 +329,36 @@ export function KanbanColumn({
         )}
       >
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-foreground">{column.title}</h3>
-          <DropdownMenu>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-foreground">{column.title}</h3>
+            {hiddenCount > 0 && !showHidden && (
+              <Badge variant="secondary" className="text-xs">
+                {hiddenCount} hidden
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            {hiddenCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2"
+                onClick={toggleShowHidden}
+              >
+                {showHidden ? (
+                  <>
+                    <EyeOff className="h-4 w-4 mr-1" />
+                    Hide
+                  </>
+                ) : (
+                  <>
+                    <Eye className="h-4 w-4 mr-1" />
+                    Show All
+                  </>
+                )}
+              </Button>
+            )}
+            <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                 <MoreVertical className="h-4 w-4" />
@@ -298,11 +401,37 @@ export function KanbanColumn({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </div>
 
         <div className="space-y-2 mb-2">
           {sortedTasks.map((task) => (
-            <TaskCard key={task.id} task={task} onUpdate={onTaskUpdate} onClick={() => onTaskClick(task.id)} />
+            <div key={task.id} className="relative">
+              <TaskCard 
+                task={task} 
+                onUpdate={() => {
+                  onTaskUpdate();
+                  loadHiddenTasksCount();
+                  if (showHidden) loadAllTasks();
+                }} 
+                onClick={() => onTaskClick(task.id)} 
+                className={task.hidden ? "opacity-50" : ""}
+              />
+              {task.hidden && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute top-2 right-2 h-7 px-2 bg-background/90 hover:bg-background"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    unhideTask(task.id);
+                  }}
+                >
+                  <Eye className="h-3 w-3 mr-1" />
+                  Unhide
+                </Button>
+              )}
+            </div>
           ))}
         </div>
 

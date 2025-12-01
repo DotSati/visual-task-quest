@@ -67,9 +67,10 @@ type TaskCardProps = {
   task: Task;
   onUpdate: () => void;
   onClick?: () => void;
+  className?: string;
 };
 
-export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
+export function TaskCard({ task, onUpdate, onClick, className }: TaskCardProps) {
   const [attachmentCount, setAttachmentCount] = useState(0);
   const [commentCount, setCommentCount] = useState(0);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -278,7 +279,8 @@ export function TaskCard({ task, onUpdate, onClick }: TaskCardProps) {
       {...listeners}
       className={cn(
         "kanban-task cursor-grab active:cursor-grabbing transition-all duration-200 group",
-        isDragging && "opacity-80 scale-110 shadow-2xl ring-2 ring-primary/30 z-50 -translate-y-2"
+        isDragging && "opacity-80 scale-110 shadow-2xl ring-2 ring-primary/30 z-50 -translate-y-2",
+        className
       )}
       onClick={onClick}
     >
