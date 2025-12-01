@@ -4,7 +4,6 @@ import { Plus, MoreVertical, Trash2, ArrowUpDown, Edit, Copy, EyeOff, Eye } from
 import { TaskCard } from "./TaskCard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
 import { useState, useMemo, useEffect } from "react";
 import {
   DropdownMenu,
@@ -329,36 +328,8 @@ export function KanbanColumn({
         )}
       >
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-foreground">{column.title}</h3>
-            {hiddenCount > 0 && !showHidden && (
-              <Badge variant="secondary" className="text-xs">
-                {hiddenCount} hidden
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            {hiddenCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2"
-                onClick={toggleShowHidden}
-              >
-                {showHidden ? (
-                  <>
-                    <EyeOff className="h-4 w-4 mr-1" />
-                    Hide
-                  </>
-                ) : (
-                  <>
-                    <Eye className="h-4 w-4 mr-1" />
-                    Show All
-                  </>
-                )}
-              </Button>
-            )}
-            <DropdownMenu>
+          <h3 className="font-semibold text-foreground">{column.title}</h3>
+          <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                 <MoreVertical className="h-4 w-4" />
@@ -370,6 +341,24 @@ export function KanbanColumn({
                 Edit Column
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              {hiddenCount > 0 && (
+                <>
+                  <DropdownMenuItem onClick={toggleShowHidden}>
+                    {showHidden ? (
+                      <>
+                        <EyeOff className="mr-2 h-4 w-4" />
+                        Hide Hidden Tasks
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="mr-2 h-4 w-4" />
+                        Show Hidden Tasks
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem onClick={() => updateSortOrder('task_number_desc')}>
                 <ArrowUpDown className="mr-2 h-4 w-4" />
                 Task # (Descending) {column.sort_order === 'task_number_desc' && '✓'}
@@ -401,7 +390,6 @@ export function KanbanColumn({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          </div>
         </div>
 
         <div className="space-y-2 mb-2">
