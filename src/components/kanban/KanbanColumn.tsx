@@ -1,6 +1,6 @@
 import { useDroppable } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
-import { Plus, MoreVertical, Trash2, ArrowUpDown, Edit, Copy, EyeOff, Eye } from "lucide-react";
+import { Plus, MoreVertical, Trash2, ArrowUpDown, Edit, Copy, EyeOff, Eye, Download } from "lucide-react";
 import { TaskCard } from "./TaskCard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -318,6 +318,48 @@ export function KanbanColumn({
     setShowHidden(!showHidden);
   };
 
+  const exportToCSV = () => {
+    if (displayTasks.length === 0) {
+      toast({
+        title: "No tasks",
+        description: "There are no tasks to export",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Create CSV header
+    const header = "Due Date,Name,Description\n";
+    
+    // Create CSV rows
+    const rows = displayTasks.map(task => {
+      const dueDate = task.due_date || "";
+      const name = task.title.replace(/"/g, '""'); // Escape quotes
+      const description = (task.description || "").replace(/"/g, '""').replace(/\n/g, " "); // Escape quotes and remove newlines
+      
+      return `"${dueDate}","${name}","${description}"`;
+    }).join("\n");
+
+    // Combine header and rows
+    const csv = header + rows;
+
+    // Create blob and download
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${column.title}_tasks.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Success",
+      description: `Exported ${displayTasks.length} task${displayTasks.length === 1 ? '' : 's'} to CSV`
+    });
+  };
+
   return (
     <>
       <div 
@@ -379,6 +421,10 @@ export function KanbanColumn({
               <DropdownMenuItem onClick={hideAllTasks}>
                 <EyeOff className="mr-2 h-4 w-4" />
                 Hide All Tasks
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportToCSV}>
+                <Download className="mr-2 h-4 w-4" />
+                Export to CSV
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
