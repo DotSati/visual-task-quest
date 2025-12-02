@@ -1,6 +1,6 @@
 import { useDroppable } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
-import { Plus, MoreVertical, Trash2, ArrowUpDown, Edit, Copy, EyeOff, Eye, Download } from "lucide-react";
+import { Plus, MoreVertical, Trash2, ArrowUpDown, Edit, Copy, EyeOff, Eye, Download, Upload } from "lucide-react";
 import { TaskCard } from "./TaskCard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -95,6 +95,7 @@ export function KanbanColumn({
   const [showHidden, setShowHidden] = useState(false);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [hiddenCount, setHiddenCount] = useState(0);
+  const fileInputRef = useState<HTMLInputElement | null>(null)[0];
 
   // Load all tasks including hidden ones to get the count
   const loadHiddenTasksCount = async () => {
@@ -360,6 +361,131 @@ export function KanbanColumn({
     });
   };
 
+  const importFromCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        toast({
+          title: "Error",
+          description: "CSV file is empty or invalid",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Parse header to find Name and Description columns
+      const header = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+      const nameIndex = header.findIndex(h => h.toLowerCase() === 'name');
+      const descriptionIndex = header.findIndex(h => h.toLowerCase() === 'description');
+
+      if (nameIndex === -1) {
+        toast({
+          title: "Error",
+          description: "CSV must have a 'Name' column",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Get the highest position in the column
+      const { data: existingTasks } = await supabase
+        .from("tasks")
+        .select("position")
+        .eq("column_id", column.id)
+        .order("position", { ascending: false })
+        .limit(1);
+
+      let nextPosition = existingTasks && existingTasks.length > 0 ? existingTasks[0].position + 1 : 0;
+
+      // Parse and create tasks
+      const tasksToCreate = [];
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.trim()) continue;
+
+        // Simple CSV parsing (handles quoted fields)
+        const values: string[] = [];
+        let currentValue = '';
+        let insideQuotes = false;
+
+        for (let j = 0; j < line.length; j++) {
+          const char = line[j];
+          if (char === '"') {
+            insideQuotes = !insideQuotes;
+          } else if (char === ',' && !insideQuotes) {
+            values.push(currentValue.trim().replace(/^"|"$/g, ''));
+            currentValue = '';
+          } else {
+            currentValue += char;
+          }
+        }
+        values.push(currentValue.trim().replace(/^"|"$/g, ''));
+
+        const name = values[nameIndex]?.trim();
+        if (!name) continue;
+
+        const description = descriptionIndex !== -1 ? values[descriptionIndex]?.trim() || null : null;
+
+        tasksToCreate.push({
+          column_id: column.id,
+          title: name,
+          description: description,
+          position: nextPosition++
+        });
+      }
+
+      if (tasksToCreate.length === 0) {
+        toast({
+          title: "No tasks",
+          description: "No valid tasks found in CSV",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Insert tasks
+      const { error } = await supabase
+        .from("tasks")
+        .insert(tasksToCreate);
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to import tasks",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: `Imported ${tasksToCreate.length} task${tasksToCreate.length === 1 ? '' : 's'}`
+        });
+        onTaskUpdate();
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to parse CSV file",
+        variant: "destructive"
+      });
+    }
+
+    // Reset file input
+    event.target.value = '';
+  };
+
+  const triggerFileInput = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    input.onchange = importFromCSV as any;
+    input.click();
+  };
+
   return (
     <>
       <div 
@@ -425,6 +551,10 @@ export function KanbanColumn({
               <DropdownMenuItem onClick={exportToCSV}>
                 <Download className="mr-2 h-4 w-4" />
                 Export to CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={triggerFileInput}>
+                <Upload className="mr-2 h-4 w-4" />
+                Import from CSV
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
