@@ -15,9 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Tag } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { TagManagementDialog } from "./TagManagementDialog";
 
 type Column = {
   id: string;
@@ -55,6 +56,7 @@ export function BoardSettingsDialog({
     sourceColumnId: "",
     targetColumnId: "",
   });
+  const [tagDialogOpen, setTagDialogOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -173,11 +175,26 @@ export function BoardSettingsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Board Automation Settings</DialogTitle>
+          <DialogTitle>Board Settings</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
           <div>
+            <h3 className="text-sm font-medium mb-2">Tag Management</h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              Edit or delete your tags
+            </p>
+            <Button
+              onClick={() => setTagDialogOpen(true)}
+              variant="outline"
+              className="w-full"
+            >
+              <Tag className="h-4 w-4 mr-2" />
+              Manage Tags
+            </Button>
+          </div>
+
+          <div className="border-t pt-4">
             <h3 className="text-sm font-medium mb-4">
               Automatic Task Movement Rules
             </h3>
@@ -294,6 +311,11 @@ export function BoardSettingsDialog({
           </div>
         </div>
       </DialogContent>
+
+      <TagManagementDialog
+        open={tagDialogOpen}
+        onOpenChange={setTagDialogOpen}
+      />
     </Dialog>
   );
 }
