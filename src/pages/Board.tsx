@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, ChevronDown, Settings } from "lucide-react";
 import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, arrayMove, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { KanbanColumn } from "@/components/kanban/KanbanColumn";
 import { TaskDialog } from "@/components/kanban/TaskDialog";
 import { TaskEditDialog } from "@/components/kanban/TaskEditDialog";
@@ -244,6 +245,30 @@ export default function Board() {
     if (!over) return;
 
     const activeId = active.id as string;
+    
+    // Check if we're dragging a column
+    const activeColumn = columns.find(c => c.id === activeId);
+    const overColumn = columns.find(c => c.id === over.id);
+    
+    if (activeColumn && overColumn && activeId !== over.id) {
+      // Column reordering
+      const oldIndex = columns.findIndex(c => c.id === activeId);
+      const newIndex = columns.findIndex(c => c.id === over.id);
+      
+      const newColumns = arrayMove(columns, oldIndex, newIndex);
+      setColumns(newColumns);
+      
+      // Update positions in database
+      for (let i = 0; i < newColumns.length; i++) {
+        await supabase
+          .from("columns")
+          .update({ position: i })
+          .eq("id", newColumns[i].id);
+      }
+      return;
+    }
+    
+    // Task dragging
     const activeTask = tasks.find(t => t.id === activeId);
     if (!activeTask) return;
 
@@ -336,26 +361,28 @@ export default function Board() {
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
-          <div 
-            className="grid gap-3 overflow-x-auto pb-4"
-            style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}
-          >
-            {columns.map((column) => (
-              <KanbanColumn
-                key={column.id}
-                column={column}
-                tasks={tasks.filter(t => t.column_id === column.id)}
-                onAddTask={() => openNewTaskDialog(column.id)}
-                onTaskUpdate={loadTasks}
-                onColumnDelete={loadColumns}
-                onColumnUpdate={loadColumns}
-                onTaskClick={(taskId) => {
-                  setSearchParams({ task: taskId });
-                }}
-                isHighlighted={highlightedColumnId === column.id}
-              />
-            ))}
-          </div>
+          <SortableContext items={columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
+            <div 
+              className="grid gap-3 overflow-x-auto pb-4"
+              style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}
+            >
+              {columns.map((column) => (
+                <KanbanColumn
+                  key={column.id}
+                  column={column}
+                  tasks={tasks.filter(t => t.column_id === column.id)}
+                  onAddTask={() => openNewTaskDialog(column.id)}
+                  onTaskUpdate={loadTasks}
+                  onColumnDelete={loadColumns}
+                  onColumnUpdate={loadColumns}
+                  onTaskClick={(taskId) => {
+                    setSearchParams({ task: taskId });
+                  }}
+                  isHighlighted={highlightedColumnId === column.id}
+                />
+              ))}
+            </div>
+          </SortableContext>
         </DndContext>
 
         {selectedTaskId && (
