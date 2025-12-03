@@ -18,17 +18,104 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Plus, LogOut, Trash2, Key } from "lucide-react";
+import { Plus, LogOut, Trash2, Key, GripVertical } from "lucide-react";
 import { Session, User } from "@supabase/supabase-js";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ApiKeysDialog } from "@/components/ApiKeysDialog";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 type Board = {
   id: string;
   title: string;
   description: string | null;
   created_at: string;
+  position: number;
 };
+
+function SortableBoardCard({
+  board,
+  onNavigate,
+  onDelete,
+}: {
+  board: Board;
+  onNavigate: () => void;
+  onDelete: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: board.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      className={`hover:border-primary transition-colors cursor-pointer group ${
+        isDragging ? "opacity-50 ring-2 ring-primary" : ""
+      }`}
+    >
+      <CardHeader className="p-4" onClick={onNavigate}>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-base">{board.title}</CardTitle>
+            {board.description && (
+              <CardDescription className="text-xs line-clamp-2">
+                {board.description}
+              </CardDescription>
+            )}
+          </div>
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-1 -m-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="w-4 h-4 text-muted-foreground" />
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-4 pt-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="text-destructive hover:text-destructive"
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          Delete
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -76,7 +163,7 @@ export default function Dashboard() {
     const { data, error } = await supabase
       .from("boards")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("position", { ascending: true });
 
     if (error) {
       toast({
@@ -105,7 +192,8 @@ export default function Dashboard() {
       .insert({
         title: newBoardTitle,
         description: newBoardDescription || null,
-        user_id: user!.id
+        user_id: user!.id,
+        position: boards.length
       })
       .select()
       .single();
@@ -189,6 +277,41 @@ export default function Dashboard() {
     navigate("/auth");
   };
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = boards.findIndex((b) => b.id === active.id);
+    const newIndex = boards.findIndex((b) => b.id === over.id);
+
+    const newBoards = arrayMove(boards, oldIndex, newIndex);
+    setBoards(newBoards);
+
+    // Update positions in database
+    const updates = newBoards.map((board, index) => ({
+      id: board.id,
+      position: index,
+    }));
+
+    for (const update of updates) {
+      await supabase
+        .from("boards")
+        .update({ position: update.position })
+        .eq("id", update.id);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -268,35 +391,24 @@ export default function Dashboard() {
             </CardHeader>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {boards.map((board) => (
-              <Card
-                key={board.id}
-                className="hover:border-primary transition-colors cursor-pointer group"
-              >
-                <CardHeader className="p-4" onClick={() => navigate(`/board/${board.id}`)}>
-                  <CardTitle className="text-base">{board.title}</CardTitle>
-                  {board.description && (
-                    <CardDescription className="text-xs line-clamp-2">{board.description}</CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      confirmDeleteBoard(board);
-                    }}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={boards.map((b) => b.id)} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {boards.map((board) => (
+                  <SortableBoardCard
+                    key={board.id}
+                    board={board}
+                    onNavigate={() => navigate(`/board/${board.id}`)}
+                    onDelete={() => confirmDeleteBoard(board)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
 
