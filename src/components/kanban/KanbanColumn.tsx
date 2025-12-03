@@ -1,6 +1,8 @@
 import { useDroppable } from "@dnd-kit/core";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
-import { Plus, MoreVertical, Trash2, ArrowUpDown, Edit, Copy, EyeOff, Eye, Download, Upload } from "lucide-react";
+import { Plus, MoreVertical, Trash2, ArrowUpDown, Edit, Copy, EyeOff, Eye, Download, Upload, GripVertical } from "lucide-react";
 import { TaskCard } from "./TaskCard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -85,9 +87,28 @@ export function KanbanColumn({
   onTaskClick,
   isHighlighted = false
 }: KanbanColumnProps) {
-  const { setNodeRef, isOver } = useDroppable({
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
     id: column.id,
   });
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setSortableRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: column.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const setNodeRef = (node: HTMLElement | null) => {
+    setDroppableRef(node);
+    setSortableRef(node);
+  };
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -489,14 +510,25 @@ export function KanbanColumn({
   return (
     <>
       <div 
-        ref={setNodeRef} 
+        ref={setNodeRef}
+        style={style}
         className={cn(
           "flex flex-col bg-card rounded-lg p-3 border transition-all duration-200",
-          (isOver || isHighlighted) && "bg-primary/10 ring-2 ring-primary shadow-xl scale-[1.03] border-primary"
+          (isOver || isHighlighted) && "bg-primary/10 ring-2 ring-primary shadow-xl scale-[1.03] border-primary",
+          isDragging && "opacity-50 ring-2 ring-primary"
         )}
       >
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-foreground">{column.title}</h3>
+        <div className="flex items-center justify-between mb-3 group">
+          <div className="flex items-center gap-2">
+            <div
+              {...attributes}
+              {...listeners}
+              className="cursor-grab active:cursor-grabbing p-1 -m-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <GripVertical className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold text-foreground">{column.title}</h3>
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
