@@ -4,6 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +40,8 @@ export default function Dashboard() {
   const [apiKeysDialogOpen, setApiKeysDialogOpen] = useState(false);
   const [newBoardTitle, setNewBoardTitle] = useState("");
   const [newBoardDescription, setNewBoardDescription] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [boardToDelete, setBoardToDelete] = useState<Board | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -142,11 +154,18 @@ export default function Dashboard() {
     });
   };
 
-  const deleteBoard = async (boardId: string) => {
+  const confirmDeleteBoard = (board: Board) => {
+    setBoardToDelete(board);
+    setDeleteDialogOpen(true);
+  };
+
+  const deleteBoard = async () => {
+    if (!boardToDelete) return;
+    
     const { error } = await supabase
       .from("boards")
       .delete()
-      .eq("id", boardId);
+      .eq("id", boardToDelete.id);
 
     if (error) {
       toast({
@@ -161,6 +180,8 @@ export default function Dashboard() {
         description: "Board deleted successfully"
       });
     }
+    setDeleteDialogOpen(false);
+    setBoardToDelete(null);
   };
 
   const handleSignOut = async () => {
@@ -265,7 +286,7 @@ export default function Dashboard() {
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      deleteBoard(board.id);
+                      confirmDeleteBoard(board);
                     }}
                     className="text-destructive hover:text-destructive"
                   >
@@ -283,6 +304,23 @@ export default function Dashboard() {
         open={apiKeysDialogOpen}
         onOpenChange={setApiKeysDialogOpen}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Board</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{boardToDelete?.title}"? All columns and tasks in this board will also be deleted. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteBoard} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
