@@ -62,6 +62,7 @@ type Task = {
   column_id: string;
   task_number: number | null;
   color: string | null;
+  created_at?: string;
   hidden?: boolean;
   subtasks?: Subtask[];
 };
