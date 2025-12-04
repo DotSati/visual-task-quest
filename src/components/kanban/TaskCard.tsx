@@ -63,6 +63,7 @@ type Task = {
   column_id: string;
   task_number: number | null;
   color: string | null;
+  created_at?: string;
   subtasks?: Subtask[];
 };
 
@@ -429,6 +430,11 @@ export function TaskCard({ task, onUpdate, onClick, className }: TaskCardProps) 
             <MessageSquare className="w-3 h-3" />
             <span>{commentCount}</span>
           </div>
+        )}
+        {task.created_at && (
+          <span className="text-muted-foreground ml-auto">
+            {format(new Date(task.created_at), "MMM d")}
+          </span>
         )}
         </div>
       </CardContent>
