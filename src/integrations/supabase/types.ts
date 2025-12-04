@@ -99,6 +99,7 @@ export type Database = {
       boards: {
         Row: {
           created_at: string
+          deleted_at: string | null
           description: string | null
           id: string
           position: number
@@ -108,6 +109,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           position?: number
@@ -117,6 +119,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           position?: number
