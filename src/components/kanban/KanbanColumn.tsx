@@ -600,7 +600,17 @@ export function KanbanColumn({
           </DropdownMenu>
         </div>
 
-        <div className="space-y-2 mb-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start text-muted-foreground hover:text-foreground mb-2"
+          onClick={onAddTask}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add Task
+        </Button>
+
+        <div className="space-y-2">
           {sortedTasks.map((task) => (
             <div key={task.id} className="relative">
               <TaskCard 
@@ -630,16 +640,6 @@ export function KanbanColumn({
             </div>
           ))}
         </div>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start text-muted-foreground hover:text-foreground"
-          onClick={onAddTask}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Task
-        </Button>
       </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
