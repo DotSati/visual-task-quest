@@ -117,7 +117,7 @@ export default function Board() {
       .from("boards")
       .select("*")
       .eq("user_id", session.session.user.id)
-      .order("created_at", { ascending: false });
+      .order("position", { ascending: true });
 
     if (!error && data) {
       setBoards(data);
