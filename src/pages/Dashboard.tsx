@@ -252,7 +252,7 @@ export default function Dashboard() {
     
     const { error } = await supabase
       .from("boards")
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq("id", boardToDelete.id);
 
     if (error) {
