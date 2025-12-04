@@ -10,6 +10,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -168,7 +171,7 @@ export function TaskCard({ task, onUpdate, onClick, className }: TaskCardProps) 
       .from("boards")
       .select("*")
       .eq("user_id", session.session.user.id)
-      .order("created_at", { ascending: false });
+      .order("position", { ascending: true });
 
     if (!error && data) {
       setBoards(data);
@@ -301,19 +304,30 @@ export function TaskCard({ task, onUpdate, onClick, className }: TaskCardProps) 
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              {boards.filter(board => board.id !== currentBoardId).map((board) => (
-                <DropdownMenuItem
-                  key={board.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    transferToBoard(board.id);
-                  }}
-                >
-                  <ArrowRightLeft className="mr-2 h-4 w-4" />
-                  Move to {board.title}
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
+              {boards.filter(board => board.id !== currentBoardId).length > 0 && (
+                <>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger onClick={(e) => e.stopPropagation()}>
+                      <ArrowRightLeft className="mr-2 h-4 w-4" />
+                      Move to board
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent onClick={(e) => e.stopPropagation()}>
+                      {boards.filter(board => board.id !== currentBoardId).map((board) => (
+                        <DropdownMenuItem
+                          key={board.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            transferToBoard(board.id);
+                          }}
+                        >
+                          {board.title}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
                 onClick={(e) => {
