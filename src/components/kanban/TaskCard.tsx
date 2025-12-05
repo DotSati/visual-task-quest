@@ -27,7 +27,7 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TaskEditDialog } from "./TaskEditDialog";
-import { Calendar, Paperclip, MoreVertical, ArrowRightLeft, Trash2, MessageSquare, User } from "lucide-react";
+import { Calendar, Paperclip, MoreVertical, ArrowRightLeft, Trash2, MessageSquare, User, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -294,6 +294,18 @@ export function TaskCard({ task, onUpdate, onClick, className }: TaskCardProps) 
             <span className="text-muted-foreground">#{task.task_number}</span>
           )}
           <span className="flex-1">{task.title}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigator.clipboard.writeText(task.title);
+              toast({ title: "Copied", description: "Title copied to clipboard" });
+            }}
+          >
+            <Copy className="h-3 w-3" />
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button
