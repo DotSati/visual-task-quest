@@ -303,9 +303,25 @@ export function TaskCard({ task, onUpdate, onClick, className }: TaskCardProps) 
               navigator.clipboard.writeText(task.title);
               toast({ title: "Copied", description: "Title copied to clipboard" });
             }}
+            title="Copy title"
           >
             <Copy className="h-3 w-3" />
           </Button>
+          {task.description && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(task.description!);
+                toast({ title: "Copied", description: "Description copied to clipboard" });
+              }}
+              title="Copy description"
+            >
+              <Copy className="h-3 w-3 text-muted-foreground" />
+            </Button>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button
