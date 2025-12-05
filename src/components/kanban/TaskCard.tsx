@@ -419,12 +419,10 @@ export function TaskCard({ task, onUpdate, onClick, className }: TaskCardProps) 
             {completedSubtasks}/{totalSubtasks}
           </div>
         )}
-        {attachmentCount > 0 && (
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Paperclip className="w-3 h-3" />
-            <span>{attachmentCount}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-1 text-muted-foreground">
+          <Paperclip className="w-3 h-3" />
+          {attachmentCount > 0 && <span>{attachmentCount}</span>}
+        </div>
         {commentCount > 0 && (
           <div className="flex items-center gap-1 text-muted-foreground">
             <MessageSquare className="w-3 h-3" />
