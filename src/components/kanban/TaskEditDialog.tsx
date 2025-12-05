@@ -545,6 +545,30 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
     event.target.value = '';
   };
 
+  const isViewableFile = (mimeType: string | null) => {
+    if (!mimeType) return false;
+    return mimeType.startsWith('image/') || mimeType === 'application/pdf';
+  };
+
+  const viewFile = async (attachment: Attachment) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('task-files')
+        .download(attachment.file_path);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      window.open(url, '_blank');
+    } catch (error) {
+      toast({
+        title: "View Failed",
+        description: "Failed to view file",
+        variant: "destructive"
+      });
+    }
+  };
+
   const downloadFile = async (attachment: Attachment) => {
     try {
       const { data, error } = await supabase.storage
@@ -867,10 +891,21 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
                       <p className="text-sm truncate">{attachment.file_name}</p>
                       <p className="text-xs text-muted-foreground">{formatFileSize(attachment.file_size)}</p>
                     </div>
+                    {isViewableFile(attachment.mime_type) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => viewFile(attachment)}
+                        title="View file"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => downloadFile(attachment)}
+                      title="Download file"
                     >
                       <Download className="w-4 h-4" />
                     </Button>
@@ -878,6 +913,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
                       variant="ghost"
                       size="sm"
                       onClick={() => deleteAttachment(attachment)}
+                      title="Delete file"
                     >
                       <X className="w-4 h-4" />
                     </Button>
