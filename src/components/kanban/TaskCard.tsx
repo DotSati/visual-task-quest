@@ -277,12 +277,14 @@ export function TaskCard({ task, onUpdate, onClick, className }: TaskCardProps) 
       ref={setNodeRef}
       style={{
         ...style,
-        borderLeft: task.color ? `4px solid ${task.color}` : undefined,
+        borderColor: task.color || undefined,
+        borderLeftWidth: task.color ? '4px' : undefined,
       }}
       {...attributes}
       {...listeners}
       className={cn(
-        "kanban-task cursor-grab active:cursor-grabbing transition-all duration-200 group border-foreground/20",
+        "kanban-task cursor-grab active:cursor-grabbing transition-all duration-200 group",
+        task.color ? "" : "border-foreground/20",
         isDragging && "opacity-80 scale-110 shadow-2xl ring-2 ring-primary/30 z-50 -translate-y-2",
         className
       )}
