@@ -27,7 +27,7 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TaskEditDialog } from "./TaskEditDialog";
-import { Calendar, Paperclip, MoreVertical, ArrowRightLeft, Trash2, MessageSquare, User, Copy } from "lucide-react";
+import { Calendar, Paperclip, MoreVertical, ArrowRightLeft, Trash2, MessageSquare, User, Copy, Tag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -329,6 +329,15 @@ export function TaskCard({ task, onUpdate, onClick, className }: TaskCardProps) 
                   Copy description
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onClick) onClick();
+                }}
+              >
+                <Tag className="mr-2 h-4 w-4" />
+                Tags
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               {boards.filter(board => board.id !== currentBoardId).length > 0 && (
                 <>
