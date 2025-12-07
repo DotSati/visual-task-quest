@@ -76,7 +76,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
   const [color, setColor] = useState(task.color || "");
   const [boardColors, setBoardColors] = useState<string[]>([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(true);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [taskTags, setTaskTags] = useState<Tag[]>([]);

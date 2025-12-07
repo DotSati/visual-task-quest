@@ -8,7 +8,7 @@ type MarkdownRendererProps = {
 
 export function MarkdownRenderer({ content, className = "" }: MarkdownRendererProps) {
   return (
-    <div className={`prose prose-sm dark:prose-invert max-w-none ${className}`}>
+    <div className={`prose prose-sm dark:prose-invert max-w-none break-words overflow-wrap-anywhere ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
