@@ -306,6 +306,7 @@ export default function Board() {
     setTaskEditOpen(false);
     setSelectedTaskId(null);
     setSearchParams({});
+    loadTasks();
   };
 
 
