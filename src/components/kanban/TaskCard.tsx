@@ -83,6 +83,7 @@ export function TaskCard({ task, onUpdate, onClick, className }: TaskCardProps) 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
   const [assignees, setAssignees] = useState<Assignee[]>([]);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
   
   const {
     attributes,
@@ -105,6 +106,7 @@ export function TaskCard({ task, onUpdate, onClick, className }: TaskCardProps) 
     loadBoards();
     loadTags();
     loadAssignees();
+    loadAllTags();
   }, [task.id]);
 
   const loadAttachmentCount = async () => {
@@ -135,6 +137,49 @@ export function TaskCard({ task, onUpdate, onClick, className }: TaskCardProps) 
       const taskTags = data.map((tt: any) => tt.tags).filter(Boolean);
       setTags(taskTags);
     }
+  };
+
+  const loadAllTags = async () => {
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session?.user) return;
+
+    const { data, error } = await supabase
+      .from("tags")
+      .select("*")
+      .eq("user_id", session.session.user.id)
+      .order("name");
+
+    if (!error && data) {
+      setAllTags(data);
+    }
+  };
+
+  const toggleTag = async (tagId: string) => {
+    const isTagged = tags.some(t => t.id === tagId);
+    
+    if (isTagged) {
+      const { error } = await supabase
+        .from("task_tags")
+        .delete()
+        .eq("task_id", task.id)
+        .eq("tag_id", tagId);
+
+      if (!error) {
+        setTags(tags.filter(t => t.id !== tagId));
+      }
+    } else {
+      const { error } = await supabase
+        .from("task_tags")
+        .insert({ task_id: task.id, tag_id: tagId });
+
+      if (!error) {
+        const newTag = allTags.find(t => t.id === tagId);
+        if (newTag) {
+          setTags([...tags, newTag]);
+        }
+      }
+    }
+    onUpdate();
   };
 
   const loadAssignees = async () => {
@@ -329,15 +374,41 @@ export function TaskCard({ task, onUpdate, onClick, className }: TaskCardProps) 
                   Copy description
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onClick) onClick();
-                }}
-              >
-                <Tag className="mr-2 h-4 w-4" />
-                Tags
-              </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger onClick={(e) => e.stopPropagation()}>
+                  <Tag className="mr-2 h-4 w-4" />
+                  Tags
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent onClick={(e) => e.stopPropagation()}>
+                  {allTags.length === 0 ? (
+                    <DropdownMenuItem disabled>No tags available</DropdownMenuItem>
+                  ) : (
+                    allTags.map((tag) => {
+                      const isSelected = tags.some(t => t.id === tag.id);
+                      return (
+                        <DropdownMenuItem
+                          key={tag.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleTag(tag.id);
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          <Checkbox
+                            checked={isSelected}
+                            className="pointer-events-none"
+                          />
+                          <span
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: tag.color || 'hsl(var(--muted))' }}
+                          />
+                          <span className="truncate">{tag.name}</span>
+                        </DropdownMenuItem>
+                      );
+                    })
+                  )}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
               <DropdownMenuSeparator />
               {boards.filter(board => board.id !== currentBoardId).length > 0 && (
                 <>
