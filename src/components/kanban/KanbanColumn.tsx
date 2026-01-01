@@ -528,7 +528,12 @@ export function KanbanColumn({
             >
               <GripVertical className="w-4 h-4 text-muted-foreground" />
             </div>
-            <h3 className="font-semibold text-foreground">{column.title}</h3>
+            <h3 className="font-semibold text-foreground">
+              {column.title}
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                ({tasks.length})
+              </span>
+            </h3>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
