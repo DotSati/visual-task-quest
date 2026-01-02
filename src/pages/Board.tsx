@@ -65,6 +65,7 @@ export default function Board() {
   const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [taskEditOpen, setTaskEditOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [highlightedColumnId, setHighlightedColumnId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -307,6 +308,7 @@ export default function Board() {
     setSelectedTaskId(null);
     setSearchParams({});
     loadTasks();
+    setRefreshKey(prev => prev + 1);
   };
 
 
@@ -381,6 +383,7 @@ export default function Board() {
                     setSearchParams({ task: taskId });
                   }}
                   isHighlighted={highlightedColumnId === column.id}
+                  refreshKey={refreshKey}
                 />
               ))}
             </div>

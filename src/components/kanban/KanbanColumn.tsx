@@ -76,6 +76,7 @@ interface KanbanColumnProps {
   onColumnUpdate: () => void;
   onTaskClick: (taskId: string) => void;
   isHighlighted?: boolean;
+  refreshKey?: number;
 }
 
 export function KanbanColumn({ 
@@ -86,7 +87,8 @@ export function KanbanColumn({
   onColumnDelete,
   onColumnUpdate,
   onTaskClick,
-  isHighlighted = false
+  isHighlighted = false,
+  refreshKey = 0
 }: KanbanColumnProps) {
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
     id: column.id,
@@ -628,6 +630,7 @@ export function KanbanColumn({
                 }} 
                 onClick={() => onTaskClick(task.id)} 
                 className={task.hidden ? "opacity-50" : ""}
+                refreshKey={refreshKey}
               />
               {task.hidden && (
                 <Button
