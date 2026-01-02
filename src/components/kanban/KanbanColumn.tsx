@@ -63,6 +63,7 @@ type Task = {
   task_number: number | null;
   color: string | null;
   created_at?: string;
+  updated_at?: string;
   hidden?: boolean;
   subtasks?: Subtask[];
 };
@@ -208,6 +209,28 @@ export function KanbanColumn({
         
       // Neither has due date - sort by task number
         return (a.task_number ?? 0) - (b.task_number ?? 0);
+      });
+    }
+    
+    if (sortOrder === 'due_date_modified') {
+      return [...tasksToSort].sort((a, b) => {
+        const aHasDate = !!a.due_date;
+        const bHasDate = !!b.due_date;
+        
+        // Tasks with due dates come first
+        if (aHasDate && !bHasDate) return -1;
+        if (!aHasDate && bHasDate) return 1;
+        
+        // Both have due dates - sort by due date ascending
+        if (aHasDate && bHasDate) {
+          const dateCompare = new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime();
+          if (dateCompare !== 0) return dateCompare;
+        }
+        
+        // Same due date or no due date - sort by updated_at descending
+        const aUpdated = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+        const bUpdated = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+        return bUpdated - aUpdated;
       });
     }
     
@@ -578,6 +601,10 @@ export function KanbanColumn({
               <DropdownMenuItem onClick={() => updateSortOrder('due_date_priority')}>
                 <ArrowUpDown className="mr-2 h-4 w-4" />
                 Due Date Priority {column.sort_order === 'due_date_priority' && '✓'}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => updateSortOrder('due_date_modified')}>
+                <ArrowUpDown className="mr-2 h-4 w-4" />
+                Due Date + Modified {column.sort_order === 'due_date_modified' && '✓'}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => updateSortOrder('manual')}>
                 <ArrowUpDown className="mr-2 h-4 w-4" />
