@@ -72,9 +72,10 @@ type TaskCardProps = {
   onUpdate: () => void;
   onClick?: () => void;
   className?: string;
+  refreshKey?: number;
 };
 
-export function TaskCard({ task, onUpdate, onClick, className }: TaskCardProps) {
+export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }: TaskCardProps) {
   const [attachmentCount, setAttachmentCount] = useState(0);
   const [commentCount, setCommentCount] = useState(0);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -107,7 +108,7 @@ export function TaskCard({ task, onUpdate, onClick, className }: TaskCardProps) 
     loadTags();
     loadAssignees();
     loadAllTags();
-  }, [task.id]);
+  }, [task.id, refreshKey]);
 
   const loadAttachmentCount = async () => {
     const { count } = await supabase
