@@ -83,6 +83,30 @@ export default function Board() {
     loadTasks();
   }, [boardId]);
 
+  // Real-time subscription for tasks
+  useEffect(() => {
+    if (!boardId) return;
+
+    const channel = supabase
+      .channel(`tasks-${boardId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tasks'
+        },
+        () => {
+          loadTasks();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [boardId]);
+
 
   useEffect(() => {
     const taskId = searchParams.get('task');
