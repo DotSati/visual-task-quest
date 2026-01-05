@@ -107,6 +107,31 @@ export default function Board() {
     };
   }, [boardId]);
 
+  // Real-time subscription for columns
+  useEffect(() => {
+    if (!boardId) return;
+
+    const channel = supabase
+      .channel(`columns-${boardId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'columns',
+          filter: `board_id=eq.${boardId}`
+        },
+        () => {
+          loadColumns();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [boardId]);
+
 
   useEffect(() => {
     const taskId = searchParams.get('task');
