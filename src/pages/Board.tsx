@@ -83,12 +83,12 @@ export default function Board() {
     loadTasks();
   }, [boardId]);
 
-  // Real-time subscription for tasks
+  // Real-time subscription for tasks - listens to all task changes and reloads
   useEffect(() => {
     if (!boardId) return;
 
     const channel = supabase
-      .channel(`tasks-${boardId}`)
+      .channel(`tasks-board-${boardId}`)
       .on(
         'postgres_changes',
         {
@@ -96,11 +96,18 @@ export default function Board() {
           schema: 'public',
           table: 'tasks'
         },
-        () => {
+        (payload) => {
+          // Reload tasks when any task change happens
+          // The loadTasks function already filters by boardId via column join
           loadTasks();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          // When subscription is established, ensure we have latest data
+          loadTasks();
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
