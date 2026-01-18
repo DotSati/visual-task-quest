@@ -78,6 +78,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
   const [editingSubtaskTitle, setEditingSubtaskTitle] = useState("");
+  const [subtasks, setSubtasks] = useState<Subtask[]>(task.subtasks || []);
   const [isPreviewMode, setIsPreviewMode] = useState(true);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -94,8 +95,21 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
       loadTaskTags();
       loadAvailableTags();
       loadAssignees();
+      loadSubtasks();
     }
   }, [open, task.id]);
+
+  const loadSubtasks = async () => {
+    const { data, error } = await supabase
+      .from("subtasks")
+      .select("*")
+      .eq("task_id", task.id)
+      .order("position", { ascending: true });
+
+    if (!error && data) {
+      setSubtasks(data);
+    }
+  };
 
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
@@ -454,6 +468,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
       });
     } else {
       setNewSubtaskTitle("");
+      loadSubtasks();
       onUpdate();
     }
   };
@@ -465,6 +480,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
       .eq("id", subtaskId);
 
     if (!error) {
+      loadSubtasks();
       onUpdate();
     }
   };
@@ -482,6 +498,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
         variant: "destructive"
       });
     } else {
+      loadSubtasks();
       onUpdate();
     }
   };
@@ -514,6 +531,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
         variant: "destructive"
       });
     } else {
+      loadSubtasks();
       onUpdate();
     }
     cancelEditingSubtask();
@@ -879,7 +897,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
           <div className="space-y-2">
             <Label>Subtasks</Label>
             <div className="space-y-2">
-              {task.subtasks?.map((subtask) => (
+              {subtasks.map((subtask) => (
                 <div key={subtask.id} className="flex items-center gap-2 p-2 bg-secondary rounded">
                   <Checkbox
                     checked={subtask.is_completed}
