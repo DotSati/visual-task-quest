@@ -76,6 +76,8 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
   const [color, setColor] = useState(task.color || "");
   const [boardColors, setBoardColors] = useState<string[]>([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
+  const [editingSubtaskTitle, setEditingSubtaskTitle] = useState("");
   const [isPreviewMode, setIsPreviewMode] = useState(true);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -484,6 +486,39 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
     }
   };
 
+  const startEditingSubtask = (subtask: Subtask) => {
+    setEditingSubtaskId(subtask.id);
+    setEditingSubtaskTitle(subtask.title);
+  };
+
+  const cancelEditingSubtask = () => {
+    setEditingSubtaskId(null);
+    setEditingSubtaskTitle("");
+  };
+
+  const saveSubtaskEdit = async () => {
+    if (!editingSubtaskId || !editingSubtaskTitle.trim()) {
+      cancelEditingSubtask();
+      return;
+    }
+
+    const { error } = await supabase
+      .from("subtasks")
+      .update({ title: editingSubtaskTitle.trim() })
+      .eq("id", editingSubtaskId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update subtask",
+        variant: "destructive"
+      });
+    } else {
+      onUpdate();
+    }
+    cancelEditingSubtask();
+  };
+
   const uploadFile = async (file: File) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -850,14 +885,44 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
                     checked={subtask.is_completed}
                     onCheckedChange={() => toggleSubtask(subtask.id, subtask.is_completed)}
                   />
-                  <span className={subtask.is_completed ? "line-through text-muted-foreground" : ""}>
-                    {subtask.title}
-                  </span>
+                  {editingSubtaskId === subtask.id ? (
+                    <Input
+                      value={editingSubtaskTitle}
+                      onChange={(e) => setEditingSubtaskTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveSubtaskEdit();
+                        if (e.key === "Escape") cancelEditingSubtask();
+                      }}
+                      onBlur={saveSubtaskEdit}
+                      autoFocus
+                      className="flex-1 h-7"
+                    />
+                  ) : (
+                    <span
+                      className={cn(
+                        "flex-1 cursor-pointer hover:text-primary",
+                        subtask.is_completed && "line-through text-muted-foreground"
+                      )}
+                      onClick={() => startEditingSubtask(subtask)}
+                      title="Click to edit"
+                    >
+                      {subtask.title}
+                    </span>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => startEditingSubtask(subtask)}
+                    className={editingSubtaskId === subtask.id ? "hidden" : ""}
+                    title="Edit subtask"
+                  >
+                    <FileEdit className="w-4 h-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => deleteSubtask(subtask.id)}
-                    className="ml-auto"
+                    title="Delete subtask"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
