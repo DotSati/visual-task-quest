@@ -85,7 +85,10 @@ export default function Board() {
 
   // Real-time subscription for tasks - listens to all task changes and reloads
   useEffect(() => {
-    if (!boardId) return;
+    if (!boardId || columns.length === 0) return;
+
+    // Get column IDs for this board to filter relevant task changes
+    const columnIds = columns.map(c => c.id);
 
     const channel = supabase
       .channel(`tasks-board-${boardId}`)
@@ -97,9 +100,17 @@ export default function Board() {
           table: 'tasks'
         },
         (payload) => {
-          // Reload tasks when any task change happens
-          // The loadTasks function already filters by boardId via column join
-          loadTasks();
+          // Check if the task belongs to one of our columns
+          const newRecord = payload.new as { column_id?: string } | null;
+          const oldRecord = payload.old as { column_id?: string } | null;
+          
+          const isRelevant = 
+            (newRecord?.column_id && columnIds.includes(newRecord.column_id)) ||
+            (oldRecord?.column_id && columnIds.includes(oldRecord.column_id));
+
+          if (isRelevant) {
+            loadTasks();
+          }
         }
       )
       .subscribe((status) => {
@@ -112,7 +123,7 @@ export default function Board() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [boardId]);
+  }, [boardId, columns]);
 
   // Real-time subscription for columns
   useEffect(() => {
