@@ -691,6 +691,15 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
           </DialogTitle>
           <DialogDescription>Update task details and manage subtasks</DialogDescription>
         </DialogHeader>
+        <div className="flex gap-2 pb-2 border-b">
+          <Button onClick={updateTask} className="flex-1">
+            Save Changes
+          </Button>
+          <Button variant="destructive" onClick={deleteTask}>
+            <Trash2 className="w-4 h-4 mr-2" />
+            Delete Task
+          </Button>
+        </div>
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="edit-title">Title</Label>
@@ -1020,15 +1029,6 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
             <TaskComments taskId={task.id} />
           </div>
 
-          <div className="flex gap-2">
-            <Button onClick={updateTask} className="flex-1">
-              Save Changes
-            </Button>
-            <Button variant="destructive" onClick={deleteTask}>
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete Task
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
