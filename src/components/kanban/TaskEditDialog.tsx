@@ -892,26 +892,22 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
                     ))}
                   </div>
                 )}
-                <div className="space-y-2">
-                  <div className="border-2 border-dashed rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
-                    <Input
-                      type="file"
-                      multiple
-                      onChange={handleFileUpload}
-                      disabled={isUploading}
-                      className="cursor-pointer opacity-0 absolute inset-0 w-full h-full"
-                      id="file-upload"
-                    />
-                    <label htmlFor="file-upload" className="cursor-pointer">
-                      <Paperclip className="w-6 h-6 mx-auto text-muted-foreground mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        {isUploading ? "Uploading..." : "Drop files or click to upload"}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Paste screenshots with Ctrl/Cmd+V
-                      </p>
-                    </label>
-                  </div>
+                <div className="relative border-2 border-dashed rounded-lg p-4 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                  <Input
+                    type="file"
+                    multiple
+                    onChange={handleFileUpload}
+                    disabled={isUploading}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    id="file-upload"
+                  />
+                  <Paperclip className="w-6 h-6 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    {isUploading ? "Uploading..." : "Drop files or click to upload"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Paste screenshots with Ctrl/Cmd+V
+                  </p>
                 </div>
               </section>
 
