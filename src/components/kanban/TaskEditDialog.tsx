@@ -711,56 +711,58 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
         </div>
 
         {/* Content */}
-        <div className="px-6 py-4">
+        <div className="px-6 py-4 space-y-6">
+          {/* Description Section - Full Width */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-foreground">Description</h3>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsPreviewMode(!isPreviewMode)}
+                className="h-7 text-xs"
+              >
+                {isPreviewMode ? (
+                  <>
+                    <FileEdit className="w-3 h-3 mr-1" />
+                    Edit
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-3 h-3 mr-1" />
+                    Preview
+                  </>
+                )}
+              </Button>
+            </div>
+            {isPreviewMode ? (
+              <div className="min-h-[120px] p-4 border rounded-lg bg-muted/20" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+                {description ? (
+                  <MarkdownRenderer content={description} />
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">Click Edit to add a description...</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Add a detailed description... Supports **bold**, *italic*, `code`, lists, and more"
+                  className="min-h-[120px] resize-none"
+                />
+                <p className="text-xs text-muted-foreground text-right">
+                  {description.length}/5000
+                </p>
+              </div>
+            )}
+          </section>
+
+          {/* Two Column Grid for remaining content */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Main Content - Left Column */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Description Section */}
-              <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-foreground">Description</h3>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsPreviewMode(!isPreviewMode)}
-                    className="h-7 text-xs"
-                  >
-                    {isPreviewMode ? (
-                      <>
-                        <FileEdit className="w-3 h-3 mr-1" />
-                        Edit
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="w-3 h-3 mr-1" />
-                        Preview
-                      </>
-                    )}
-                  </Button>
-                </div>
-                {isPreviewMode ? (
-                  <div className="min-h-[120px] p-4 border rounded-lg bg-muted/20">
-                    {description ? (
-                      <MarkdownRenderer content={description} />
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">Click Edit to add a description...</p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Add a detailed description... Supports **bold**, *italic*, `code`, lists, and more"
-                      className="min-h-[120px] resize-none"
-                    />
-                    <p className="text-xs text-muted-foreground text-right">
-                      {description.length}/5000
-                    </p>
-                  </div>
-                )}
-              </section>
 
               {/* Subtasks Section */}
               <section className="space-y-3">
