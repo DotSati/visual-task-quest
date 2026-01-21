@@ -759,348 +759,341 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
             )}
           </section>
 
-          {/* Two Column Grid for remaining content */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Main Content - Left Column */}
-            <div className="lg:col-span-2 space-y-6">
-
-              {/* Subtasks Section */}
-              <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-foreground">
-                    Subtasks {subtasks.length > 0 && (
-                      <span className="text-muted-foreground font-normal ml-1">
-                        ({subtasks.filter(s => s.is_completed).length}/{subtasks.length})
-                      </span>
+          {/* Metadata Grid - Two Columns */}
+          <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Due Date */}
+            <div className="p-4 rounded-lg border bg-card space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                Due Date
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal h-9",
+                      !dueDate && "text-muted-foreground"
                     )}
-                  </h3>
-                </div>
+                  >
+                    {dueDate ? format(dueDate, "MMM d, yyyy") : "Set due date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dueDate}
+                    onSelect={setDueDate}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              {dueDate && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full h-7 text-xs text-muted-foreground"
+                  onClick={() => setDueDate(undefined)}
+                >
+                  Clear date
+                </Button>
+              )}
+            </div>
+
+            {/* Assignees */}
+            <div className="p-4 rounded-lg border bg-card space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <User className="w-4 h-4 text-muted-foreground" />
+                Assignees
+              </div>
+              {assignees.length > 0 && (
                 <div className="space-y-2">
-                  {subtasks.map((subtask) => (
-                    <div 
-                      key={subtask.id} 
-                      className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors group"
+                  {assignees.map((assignee) => (
+                    <div
+                      key={assignee.id}
+                      className="flex items-center gap-2 text-sm group"
                     >
-                      <Checkbox
-                        checked={subtask.is_completed}
-                        onCheckedChange={() => toggleSubtask(subtask.id, subtask.is_completed)}
-                        className="shrink-0"
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <User className="w-3 h-3 text-primary" />
+                      </div>
+                      <span className="flex-1 truncate text-sm">
+                        {assignee.email || `User ${assignee.user_id.slice(0, 8)}`}
+                      </span>
+                      <button
+                        onClick={() => removeAssignee(assignee.id)}
+                        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="Email..."
+                  value={assigneeEmail}
+                  onChange={(e) => setAssigneeEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addAssignee())}
+                  className="h-8 text-sm"
+                />
+                <Button type="button" size="sm" onClick={addAssignee} className="shrink-0 h-8">
+                  <UserPlus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Tags */}
+            <div className="p-4 rounded-lg border bg-card space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Tag className="w-4 h-4 text-muted-foreground" />
+                Tags
+              </div>
+              {taskTags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {taskTags.map((tag) => (
+                    <div
+                      key={tag.id}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground"
+                      style={tag.color ? { backgroundColor: tag.color, color: 'white' } : undefined}
+                    >
+                      {tag.name}
+                      <button
+                        onClick={() => removeTag(tag.id)}
+                        className="hover:opacity-70 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add tag..."
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                  list="available-tags"
+                  className="h-8 text-sm"
+                />
+                <datalist id="available-tags">
+                  {availableTags.map((tag) => (
+                    <option key={tag.id} value={tag.name} />
+                  ))}
+                </datalist>
+                <Button type="button" size="sm" onClick={addOrSelectTag} className="shrink-0 h-8">
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Color */}
+            <div className="p-4 rounded-lg border bg-card space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <div 
+                  className="w-4 h-4 rounded border"
+                  style={{ backgroundColor: color || 'transparent' }}
+                />
+                Task Color
+              </div>
+              {boardColors.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Recent</p>
+                  <div className="flex flex-wrap gap-2">
+                    {boardColors.map((boardColor) => (
+                      <button
+                        key={boardColor}
+                        type="button"
+                        onClick={() => setColor(boardColor)}
+                        className={cn(
+                          "w-6 h-6 rounded-full border-2 transition-all hover:scale-110",
+                          color === boardColor ? "ring-2 ring-primary ring-offset-2" : ""
+                        )}
+                        style={{ backgroundColor: boardColor, borderColor: 'transparent' }}
                       />
-                      {editingSubtaskId === subtask.id ? (
-                        <Input
-                          value={editingSubtaskTitle}
-                          onChange={(e) => setEditingSubtaskTitle(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") saveSubtaskEdit();
-                            if (e.key === "Escape") cancelEditingSubtask();
-                          }}
-                          onBlur={saveSubtaskEdit}
-                          autoFocus
-                          className="flex-1 h-8"
-                        />
-                      ) : (
-                        <span
-                          className={cn(
-                            "flex-1 text-sm cursor-pointer hover:text-primary transition-colors",
-                            subtask.is_completed && "line-through text-muted-foreground"
-                          )}
-                          onClick={() => startEditingSubtask(subtask)}
-                        >
-                          {subtask.title}
-                        </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <Input
+                  type="color"
+                  value={color || "#3b82f6"}
+                  onChange={(e) => setColor(e.target.value)}
+                  className="w-10 h-8 p-0.5 cursor-pointer"
+                />
+                {color && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setColor("")}
+                    className="h-8 text-xs"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* Subtasks Section - Full Width */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-foreground">
+                Subtasks {subtasks.length > 0 && (
+                  <span className="text-muted-foreground font-normal ml-1">
+                    ({subtasks.filter(s => s.is_completed).length}/{subtasks.length})
+                  </span>
+                )}
+              </h3>
+            </div>
+            <div className="space-y-2">
+              {subtasks.map((subtask) => (
+                <div 
+                  key={subtask.id} 
+                  className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors group"
+                >
+                  <Checkbox
+                    checked={subtask.is_completed}
+                    onCheckedChange={() => toggleSubtask(subtask.id, subtask.is_completed)}
+                    className="shrink-0"
+                  />
+                  {editingSubtaskId === subtask.id ? (
+                    <Input
+                      value={editingSubtaskTitle}
+                      onChange={(e) => setEditingSubtaskTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveSubtaskEdit();
+                        if (e.key === "Escape") cancelEditingSubtask();
+                      }}
+                      onBlur={saveSubtaskEdit}
+                      autoFocus
+                      className="flex-1 h-8"
+                    />
+                  ) : (
+                    <span
+                      className={cn(
+                        "flex-1 text-sm cursor-pointer hover:text-primary transition-colors",
+                        subtask.is_completed && "line-through text-muted-foreground"
                       )}
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                      onClick={() => startEditingSubtask(subtask)}
+                    >
+                      {subtask.title}
+                    </span>
+                  )}
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => startEditingSubtask(subtask)}
+                    >
+                      <FileEdit className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      onClick={() => deleteSubtask(subtask.id)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add a subtask..."
+                  value={newSubtaskTitle}
+                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && addSubtask()}
+                  className="h-9"
+                />
+                <Button onClick={addSubtask} size="sm" className="shrink-0">
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add
+                </Button>
+              </div>
+            </div>
+          </section>
+
+          {/* Attachments Section - Full Width */}
+          <section className="space-y-3">
+            <h3 className="text-sm font-medium text-foreground">Attachments</h3>
+            {attachments.length > 0 && (
+              <div className="grid gap-2">
+                {attachments.map((attachment) => (
+                  <div 
+                    key={attachment.id} 
+                    className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded bg-muted flex items-center justify-center shrink-0">
+                      <Paperclip className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{attachment.file_name}</p>
+                      <p className="text-xs text-muted-foreground">{formatFileSize(attachment.file_size)}</p>
+                    </div>
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                      {isViewableFile(attachment.mime_type) && (
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => startEditingSubtask(subtask)}
+                          onClick={() => viewFile(attachment)}
                         >
-                          <FileEdit className="w-3.5 h-3.5" />
+                          <Eye className="w-3.5 h-3.5" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive hover:text-destructive"
-                          onClick={() => deleteSubtask(subtask.id)}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Add a subtask..."
-                      value={newSubtaskTitle}
-                      onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                      onKeyPress={(e) => e.key === "Enter" && addSubtask()}
-                      className="h-9"
-                    />
-                    <Button onClick={addSubtask} size="sm" className="shrink-0">
-                      <Plus className="w-4 h-4 mr-1" />
-                      Add
-                    </Button>
-                  </div>
-                </div>
-              </section>
-
-              {/* Attachments Section */}
-              <section className="space-y-3">
-                <h3 className="text-sm font-medium text-foreground">Attachments</h3>
-                {attachments.length > 0 && (
-                  <div className="grid gap-2">
-                    {attachments.map((attachment) => (
-                      <div 
-                        key={attachment.id} 
-                        className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors group"
-                      >
-                        <div className="w-8 h-8 rounded bg-muted flex items-center justify-center shrink-0">
-                          <Paperclip className="w-4 h-4 text-muted-foreground" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{attachment.file_name}</p>
-                          <p className="text-xs text-muted-foreground">{formatFileSize(attachment.file_size)}</p>
-                        </div>
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                          {isViewableFile(attachment.mime_type) && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => viewFile(attachment)}
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => downloadFile(attachment)}
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive hover:text-destructive"
-                            onClick={() => deleteAttachment(attachment)}
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="relative border-2 border-dashed rounded-lg p-4 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                  <Input
-                    type="file"
-                    multiple
-                    onChange={handleFileUpload}
-                    disabled={isUploading}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    id="file-upload"
-                  />
-                  <Paperclip className="w-6 h-6 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    {isUploading ? "Uploading..." : "Drop files or click to upload"}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Paste screenshots with Ctrl/Cmd+V
-                  </p>
-                </div>
-              </section>
-
-              {/* Comments Section */}
-              <section className="space-y-3 pt-4 border-t">
-                <h3 className="text-sm font-medium text-foreground">Comments</h3>
-                <TaskComments taskId={task.id} />
-              </section>
-            </div>
-
-            {/* Sidebar - Right Column */}
-            <div className="space-y-4">
-              {/* Due Date */}
-              <div className="p-4 rounded-lg border bg-card space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <CalendarIcon className="w-4 h-4 text-muted-foreground" />
-                  Due Date
-                </div>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal h-9",
-                        !dueDate && "text-muted-foreground"
                       )}
-                    >
-                      {dueDate ? format(dueDate, "MMM d, yyyy") : "Set due date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dueDate}
-                      onSelect={setDueDate}
-                      initialFocus
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-                {dueDate && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full h-7 text-xs text-muted-foreground"
-                    onClick={() => setDueDate(undefined)}
-                  >
-                    Clear date
-                  </Button>
-                )}
-              </div>
-
-              {/* Assignees */}
-              <div className="p-4 rounded-lg border bg-card space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <User className="w-4 h-4 text-muted-foreground" />
-                  Assignees
-                </div>
-                {assignees.length > 0 && (
-                  <div className="space-y-2">
-                    {assignees.map((assignee) => (
-                      <div
-                        key={assignee.id}
-                        className="flex items-center gap-2 text-sm group"
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => downloadFile(attachment)}
                       >
-                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                          <User className="w-3 h-3 text-primary" />
-                        </div>
-                        <span className="flex-1 truncate text-sm">
-                          {assignee.email || `User ${assignee.user_id.slice(0, 8)}`}
-                        </span>
-                        <button
-                          onClick={() => removeAssignee(assignee.id)}
-                          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <Input
-                    type="email"
-                    placeholder="Email..."
-                    value={assigneeEmail}
-                    onChange={(e) => setAssigneeEmail(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addAssignee())}
-                    className="h-8 text-sm"
-                  />
-                  <Button type="button" size="sm" onClick={addAssignee} className="shrink-0 h-8">
-                    <UserPlus className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Tags */}
-              <div className="p-4 rounded-lg border bg-card space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Tag className="w-4 h-4 text-muted-foreground" />
-                  Tags
-                </div>
-                {taskTags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {taskTags.map((tag) => (
-                      <div
-                        key={tag.id}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground"
-                        style={tag.color ? { backgroundColor: tag.color, color: 'white' } : undefined}
+                        <Download className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => deleteAttachment(attachment)}
                       >
-                        {tag.name}
-                        <button
-                          onClick={() => removeTag(tag.id)}
-                          className="hover:opacity-70 transition-opacity"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Add tag..."
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={handleTagKeyDown}
-                    list="available-tags"
-                    className="h-8 text-sm"
-                  />
-                  <datalist id="available-tags">
-                    {availableTags.map((tag) => (
-                      <option key={tag.id} value={tag.name} />
-                    ))}
-                  </datalist>
-                  <Button type="button" size="sm" onClick={addOrSelectTag} className="shrink-0 h-8">
-                    <Plus className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Color */}
-              <div className="p-4 rounded-lg border bg-card space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <div 
-                    className="w-4 h-4 rounded border"
-                    style={{ backgroundColor: color || 'transparent' }}
-                  />
-                  Task Color
-                </div>
-                {boardColors.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">Recent</p>
-                    <div className="flex flex-wrap gap-2">
-                      {boardColors.map((boardColor) => (
-                        <button
-                          key={boardColor}
-                          type="button"
-                          onClick={() => setColor(boardColor)}
-                          className={cn(
-                            "w-6 h-6 rounded-full border-2 transition-all hover:scale-110",
-                            color === boardColor ? "ring-2 ring-primary ring-offset-2" : ""
-                          )}
-                          style={{ backgroundColor: boardColor, borderColor: 'transparent' }}
-                        />
-                      ))}
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
                   </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="color"
-                    value={color || "#3b82f6"}
-                    onChange={(e) => setColor(e.target.value)}
-                    className="w-10 h-8 p-0.5 cursor-pointer"
-                  />
-                  {color && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setColor("")}
-                      className="h-8 text-xs"
-                    >
-                      Clear
-                    </Button>
-                  )}
-                </div>
+                ))}
               </div>
+            )}
+            <div className="relative border-2 border-dashed rounded-lg p-4 text-center hover:border-primary/50 transition-colors cursor-pointer">
+              <Input
+                type="file"
+                multiple
+                onChange={handleFileUpload}
+                disabled={isUploading}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                id="file-upload"
+              />
+              <Paperclip className="w-6 h-6 mx-auto text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">
+                {isUploading ? "Uploading..." : "Drop files or click to upload"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Paste screenshots with Ctrl/Cmd+V
+              </p>
             </div>
-          </div>
+          </section>
+
+          {/* Comments Section - Full Width */}
+          <section className="space-y-3 pt-4 border-t">
+            <h3 className="text-sm font-medium text-foreground">Comments</h3>
+            <TaskComments taskId={task.id} />
+          </section>
         </div>
       </DialogContent>
     </Dialog>
