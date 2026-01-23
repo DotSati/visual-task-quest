@@ -725,6 +725,9 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+              <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                <X className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         </div>
