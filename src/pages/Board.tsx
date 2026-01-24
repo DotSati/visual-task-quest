@@ -11,6 +11,7 @@ import { TaskDialog } from "@/components/kanban/TaskDialog";
 import { TaskEditDialog } from "@/components/kanban/TaskEditDialog";
 import { ColumnDialog } from "@/components/kanban/ColumnDialog";
 import { BoardSettingsDialog } from "@/components/kanban/BoardSettingsDialog";
+import { TagFilter } from "@/components/kanban/TagFilter";
 import { useAutomation } from "@/hooks/useAutomation";
 import {
   DropdownMenu,
@@ -67,6 +68,8 @@ export default function Board() {
   const [taskEditOpen, setTaskEditOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [highlightedColumnId, setHighlightedColumnId] = useState<string | null>(null);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [taskTags, setTaskTags] = useState<Record<string, string[]>>({});
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -81,6 +84,7 @@ export default function Board() {
     loadBoards();
     loadColumns();
     loadTasks();
+    loadTaskTags();
   }, [boardId]);
 
   // Real-time subscription for tasks - listens to all task changes and reloads
@@ -243,6 +247,39 @@ export default function Board() {
     }));
 
     setTasks(tasksWithSubtasks);
+  };
+
+  const loadTaskTags = async () => {
+    // Get all tasks for this board and their tags
+    const { data: tasksData } = await supabase
+      .from("tasks")
+      .select(`
+        id,
+        columns!inner(board_id)
+      `)
+      .eq("columns.board_id", boardId);
+
+    if (!tasksData || tasksData.length === 0) {
+      setTaskTags({});
+      return;
+    }
+
+    const taskIds = tasksData.map(t => t.id);
+    const { data: tagData } = await supabase
+      .from("task_tags")
+      .select("task_id, tag_id")
+      .in("task_id", taskIds);
+
+    if (tagData) {
+      const tagsMap: Record<string, string[]> = {};
+      tagData.forEach(tt => {
+        if (!tagsMap[tt.task_id]) {
+          tagsMap[tt.task_id] = [];
+        }
+        tagsMap[tt.task_id].push(tt.tag_id);
+      });
+      setTaskTags(tagsMap);
+    }
   };
 
   const { loadRules } = useAutomation(boardId, tasks, loadTasks);
@@ -426,6 +463,14 @@ export default function Board() {
           </div>
         </div>
 
+        <div className="mb-4">
+          <TagFilter
+            boardId={boardId!}
+            selectedTagIds={selectedTagIds}
+            onFilterChange={setSelectedTagIds}
+          />
+        </div>
+
         <DndContext
           sensors={sensors}
           onDragStart={handleDragStart}
@@ -437,11 +482,21 @@ export default function Board() {
               className="grid gap-3 overflow-x-auto pb-4"
               style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}
             >
-              {columns.map((column) => (
+              {columns.map((column) => {
+                // Filter tasks by selected tags
+                const columnTasks = tasks.filter(t => t.column_id === column.id);
+                const filteredTasks = selectedTagIds.length === 0
+                  ? columnTasks
+                  : columnTasks.filter(task => {
+                      const tagIds = taskTags[task.id] || [];
+                      return selectedTagIds.some(tagId => tagIds.includes(tagId));
+                    });
+
+                return (
                 <KanbanColumn
                   key={column.id}
                   column={column}
-                  tasks={tasks.filter(t => t.column_id === column.id)}
+                  tasks={filteredTasks}
                   onAddTask={() => openNewTaskDialog(column.id)}
                   onTaskUpdate={loadTasks}
                   onColumnDelete={loadColumns}
@@ -452,7 +507,8 @@ export default function Board() {
                   isHighlighted={highlightedColumnId === column.id}
                   refreshKey={refreshKey}
                 />
-              ))}
+              );
+              })}
             </div>
           </SortableContext>
         </DndContext>
