@@ -430,6 +430,11 @@ export default function Board() {
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            <TagFilter
+              boardId={boardId!}
+              selectedTagIds={selectedTagIds}
+              onFilterChange={setSelectedTagIds}
+            />
             <Button
               variant="outline"
               size="sm"
@@ -461,14 +466,6 @@ export default function Board() {
               Add Column
             </Button>
           </div>
-        </div>
-
-        <div className="mb-4">
-          <TagFilter
-            boardId={boardId!}
-            selectedTagIds={selectedTagIds}
-            onFilterChange={setSelectedTagIds}
-          />
         </div>
 
         <DndContext
