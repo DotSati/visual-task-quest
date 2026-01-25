@@ -39,7 +39,7 @@ export const useSessionManager = () => {
           return;
         }
 
-        // Also check if session is older than 10 days based on issued_at
+        // Check if session is older than 10 days based on issued_at
         if (tokenPayload.iat) {
           const issuedAt = tokenPayload.iat * 1000;
           const sessionAge = now - issuedAt;
@@ -49,16 +49,16 @@ export const useSessionManager = () => {
             await handleExpiredSession();
             return;
           }
-        }
 
-        // Warn user if session is about to expire (within 1 hour)
-        const timeUntilExpiry = expiryTime - now;
-        if (timeUntilExpiry < 60 * 60 * 1000 && timeUntilExpiry > 0) {
-          toast({
-            title: "Session Expiring Soon",
-            description: "Your session will expire in less than an hour. Please save your work.",
-            variant: "destructive",
-          });
+          // Warn user if session is approaching 10-day limit (within last hour of the 10-day period)
+          const timeUntilSessionLimit = SESSION_MAX_AGE_MS - sessionAge;
+          if (timeUntilSessionLimit < 60 * 60 * 1000 && timeUntilSessionLimit > 0) {
+            toast({
+              title: "Session Expiring Soon",
+              description: "Your session will expire in less than an hour. Please save your work and re-login.",
+              variant: "destructive",
+            });
+          }
         }
       }
     } catch (err) {
