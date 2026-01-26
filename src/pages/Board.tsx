@@ -304,42 +304,11 @@ export default function Board() {
 
     if (!activeTask) return;
 
-    // Highlight the column we're over
+    // Only update highlighted column - don't modify tasks state during drag
     if (overTask) {
       setHighlightedColumnId(overTask.column_id);
     } else if (overColumn) {
       setHighlightedColumnId(overColumn.id);
-    }
-
-    // Moving over another task in the same column
-    if (overTask && activeTask.column_id === overTask.column_id) {
-      const columnTasks = tasks.filter(t => t.column_id === activeTask.column_id);
-      const oldIndex = columnTasks.findIndex(t => t.id === activeId);
-      const newIndex = columnTasks.findIndex(t => t.id === overId);
-
-      if (oldIndex !== newIndex) {
-        const reorderedTasks = [...columnTasks];
-        const [movedTask] = reorderedTasks.splice(oldIndex, 1);
-        reorderedTasks.splice(newIndex, 0, movedTask);
-        
-        const otherTasks = tasks.filter(t => t.column_id !== activeTask.column_id);
-        setTasks([...otherTasks, ...reorderedTasks]);
-      }
-    }
-    // Moving over another task in a different column
-    else if (overTask && activeTask.column_id !== overTask.column_id) {
-      const targetColumnId = overTask.column_id;
-      const newTasks = tasks.map(t =>
-        t.id === activeId ? { ...t, column_id: targetColumnId } : t
-      );
-      setTasks(newTasks);
-    }
-    // Moving to an empty column or column header
-    else if (overColumn && activeTask.column_id !== overColumn.id) {
-      const newTasks = tasks.map(t =>
-        t.id === activeId ? { ...t, column_id: overColumn.id } : t
-      );
-      setTasks(newTasks);
     }
   };
 
@@ -351,15 +320,16 @@ export default function Board() {
     if (!over) return;
 
     const activeId = active.id as string;
+    const overId = over.id as string;
     
     // Check if we're dragging a column
     const activeColumn = columns.find(c => c.id === activeId);
-    const overColumn = columns.find(c => c.id === over.id);
+    const overColumn = columns.find(c => c.id === overId);
     
-    if (activeColumn && overColumn && activeId !== over.id) {
+    if (activeColumn && overColumn && activeId !== overId) {
       // Column reordering
       const oldIndex = columns.findIndex(c => c.id === activeId);
-      const newIndex = columns.findIndex(c => c.id === over.id);
+      const newIndex = columns.findIndex(c => c.id === overId);
       
       const newColumns = arrayMove(columns, oldIndex, newIndex);
       setColumns(newColumns);
@@ -378,25 +348,39 @@ export default function Board() {
     const activeTask = tasks.find(t => t.id === activeId);
     if (!activeTask) return;
 
-    // Get all tasks in the target column and update their positions
-    const columnTasks = tasks.filter(t => t.column_id === activeTask.column_id);
+    // Determine target column
+    const overTask = tasks.find(t => t.id === overId);
+    const targetColumn = columns.find(c => c.id === overId);
     
-    // Update positions for all tasks in the column
-    const updates = columnTasks.map((task, index) => ({
-      id: task.id,
-      column_id: activeTask.column_id,
-      position: index
-    }));
+    let targetColumnId = activeTask.column_id;
+    let targetPosition = activeTask.position;
+    
+    if (overTask) {
+      // Dropped on another task
+      targetColumnId = overTask.column_id;
+      targetPosition = overTask.position;
+    } else if (targetColumn) {
+      // Dropped on an empty column
+      targetColumnId = targetColumn.id;
+      const tasksInColumn = tasks.filter(t => t.column_id === targetColumn.id);
+      targetPosition = tasksInColumn.length;
+    }
 
-    // Batch update all tasks
-    for (const update of updates) {
-      await supabase
-        .from("tasks")
-        .update({
-          column_id: update.column_id,
-          position: update.position
-        })
-        .eq("id", update.id);
+    // Update the dragged task's column and position
+    const { error } = await supabase
+      .from("tasks")
+      .update({
+        column_id: targetColumnId,
+        position: targetPosition
+      })
+      .eq("id", activeId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to move task",
+        variant: "destructive"
+      });
     }
 
     loadTasks();
