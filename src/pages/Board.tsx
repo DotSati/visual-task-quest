@@ -488,6 +488,7 @@ export default function Board() {
                   }}
                   isHighlighted={highlightedColumnId === column.id}
                   refreshKey={refreshKey}
+                  activeId={activeId}
                 />
               );
               })}
