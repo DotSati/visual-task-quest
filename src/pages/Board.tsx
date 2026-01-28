@@ -4,9 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, ChevronDown, Settings } from "lucide-react";
-import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, DragOverlay, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { KanbanColumn } from "@/components/kanban/KanbanColumn";
+import { TaskCard } from "@/components/kanban/TaskCard";
 import { TaskDialog } from "@/components/kanban/TaskDialog";
 import { TaskEditDialog } from "@/components/kanban/TaskEditDialog";
 import { ColumnDialog } from "@/components/kanban/ColumnDialog";
@@ -492,6 +493,15 @@ export default function Board() {
               })}
             </div>
           </SortableContext>
+          <DragOverlay>
+            {activeId && tasks.find(t => t.id === activeId) ? (
+              <TaskCard
+                task={tasks.find(t => t.id === activeId)!}
+                onUpdate={() => {}}
+                className="rotate-3 shadow-2xl opacity-90"
+              />
+            ) : null}
+          </DragOverlay>
         </DndContext>
 
         {selectedTaskId && (
