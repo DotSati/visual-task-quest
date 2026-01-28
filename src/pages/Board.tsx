@@ -494,7 +494,12 @@ export default function Board() {
               })}
             </div>
           </SortableContext>
-          <DragOverlay>
+          <DragOverlay
+            dropAnimation={{
+              duration: 250,
+              easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+            }}
+          >
             {activeId && tasks.find(t => t.id === activeId) ? (
               <TaskCard
                 task={tasks.find(t => t.id === activeId)!}
