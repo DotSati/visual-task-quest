@@ -69,6 +69,7 @@ export default function Board() {
   const [taskEditOpen, setTaskEditOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [highlightedColumnId, setHighlightedColumnId] = useState<string | null>(null);
+  const [dropTargetTaskId, setDropTargetTaskId] = useState<string | null>(null);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [taskTags, setTaskTags] = useState<Record<string, string[]>>({});
 
@@ -293,6 +294,7 @@ export default function Board() {
     const { active, over } = event;
     if (!over) {
       setHighlightedColumnId(null);
+      setDropTargetTaskId(null);
       return;
     }
 
@@ -305,11 +307,13 @@ export default function Board() {
 
     if (!activeTask) return;
 
-    // Only update highlighted column - don't modify tasks state during drag
+    // Update highlighted column and drop target
     if (overTask) {
       setHighlightedColumnId(overTask.column_id);
+      setDropTargetTaskId(overTask.id);
     } else if (overColumn) {
       setHighlightedColumnId(overColumn.id);
+      setDropTargetTaskId(null);
     }
   };
 
@@ -317,6 +321,7 @@ export default function Board() {
     const { active, over } = event;
     setActiveId(null);
     setHighlightedColumnId(null);
+    setDropTargetTaskId(null);
 
     if (!over) return;
 
@@ -489,6 +494,7 @@ export default function Board() {
                   isHighlighted={highlightedColumnId === column.id}
                   refreshKey={refreshKey}
                   activeId={activeId}
+                  dropTargetTaskId={dropTargetTaskId}
                 />
               );
               })}

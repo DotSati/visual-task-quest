@@ -79,6 +79,7 @@ interface KanbanColumnProps {
   isHighlighted?: boolean;
   refreshKey?: number;
   activeId?: string | null;
+  dropTargetTaskId?: string | null;
 }
 
 export function KanbanColumn({ 
@@ -91,7 +92,8 @@ export function KanbanColumn({
   onTaskClick,
   isHighlighted = false,
   refreshKey = 0,
-  activeId = null
+  activeId = null,
+  dropTargetTaskId = null
 }: KanbanColumnProps) {
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
     id: column.id,
@@ -650,6 +652,11 @@ export function KanbanColumn({
         <div className="space-y-2">
           {sortedTasks.map((task) => (
             <div key={task.id} className="relative">
+              {dropTargetTaskId === task.id && activeId && activeId !== task.id && (
+                <div className="h-16 mb-2 rounded-lg border-2 border-dashed border-primary/50 bg-primary/5 flex items-center justify-center animate-pulse">
+                  <span className="text-xs text-primary/70 font-medium">Drop here</span>
+                </div>
+              )}
               <TaskCard 
                 task={task} 
                 onUpdate={() => {
@@ -680,6 +687,11 @@ export function KanbanColumn({
               )}
             </div>
           ))}
+          {isHighlighted && activeId && !dropTargetTaskId && (
+            <div className="h-16 rounded-lg border-2 border-dashed border-primary/50 bg-primary/5 flex items-center justify-center animate-pulse">
+              <span className="text-xs text-primary/70 font-medium">Drop here</span>
+            </div>
+          )}
         </div>
       </div>
 
