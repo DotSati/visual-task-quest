@@ -3,7 +3,8 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, ChevronDown, Settings } from "lucide-react";
+import { ArrowLeft, ChevronDown, Search, Settings, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { DndContext, DragEndEvent, DragOverEvent, DragStartEvent, DragOverlay, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { KanbanColumn } from "@/components/kanban/KanbanColumn";
@@ -72,6 +73,7 @@ export default function Board() {
   const [dropTargetTaskId, setDropTargetTaskId] = useState<string | null>(null);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [taskTags, setTaskTags] = useState<Record<string, string[]>>({});
+  const [searchQuery, setSearchQuery] = useState("");
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -420,6 +422,25 @@ export default function Board() {
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-48 h-9 pl-8 pr-8 text-sm"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+                  onClick={() => setSearchQuery("")}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
             <TagFilter
               boardId={boardId!}
               selectedTagIds={selectedTagIds}
@@ -470,11 +491,20 @@ export default function Board() {
               style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}
             >
               {columns.map((column) => {
-                // Filter tasks by selected tags
+                // Filter tasks by search query and selected tags
                 const columnTasks = tasks.filter(t => t.column_id === column.id);
-                const filteredTasks = selectedTagIds.length === 0
+                const searchFilteredTasks = searchQuery.trim() === ""
                   ? columnTasks
                   : columnTasks.filter(task => {
+                      const query = searchQuery.toLowerCase();
+                      return (
+                        task.title.toLowerCase().includes(query) ||
+                        (task.description && task.description.toLowerCase().includes(query))
+                      );
+                    });
+                const filteredTasks = selectedTagIds.length === 0
+                  ? searchFilteredTasks
+                  : searchFilteredTasks.filter(task => {
                       const tagIds = taskTags[task.id] || [];
                       return selectedTagIds.some(tagId => tagIds.includes(tagId));
                     });
