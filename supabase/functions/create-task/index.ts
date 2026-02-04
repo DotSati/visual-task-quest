@@ -48,11 +48,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate API key and get user_id
+    // Hash the incoming API key to compare against stored hashes
+    const incomingKeyHash = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(apikey)
+    );
+    const hashHex = Array.from(new Uint8Array(incomingKeyHash))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    // Validate API key by comparing hash
     const { data: apiKeyData, error: apiKeyError } = await supabase
       .from('api_keys')
-      .select('user_id')
-      .eq('key', apikey)
+      .select('id, user_id, key_hash')
+      .eq('key_hash', hashHex)
       .maybeSingle();
 
     if (apiKeyError || !apiKeyData) {
@@ -63,11 +72,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Update last_used_at for the API key
+    // Update last_used_at for the API key (using id now, not the key)
     await supabase
       .from('api_keys')
       .update({ last_used_at: new Date().toISOString() })
-      .eq('key', apikey);
+      .eq('id', apiKeyData.id);
 
     // Verify column exists and get its board_id
     const { data: columnData, error: columnError } = await supabase

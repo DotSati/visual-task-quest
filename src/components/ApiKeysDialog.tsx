@@ -29,13 +29,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Copy, Trash2, Plus, Eye, EyeOff } from "lucide-react";
+import { Copy, Trash2, Plus } from "lucide-react";
 import { format } from "date-fns";
 
 type ApiKey = {
   id: string;
   name: string;
-  key: string;
+  key: string; // Now stores masked version only (sk_xxxxx...xxxx)
+  key_hash: string | null;
   created_at: string;
   last_used_at: string | null;
 };
@@ -53,7 +54,6 @@ export function ApiKeysDialog({ open, onOpenChange }: ApiKeysDialogProps) {
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [keyToDelete, setKeyToDelete] = useState<string | null>(null);
-  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (open) {
@@ -107,13 +107,27 @@ export function ApiKeysDialog({ open, onOpenChange }: ApiKeysDialogProps) {
     if (!session.session?.user) return;
 
     const newKey = generateApiKey();
+    
+    // Hash the key for secure storage (using SHA-256 via Supabase function)
+    const { data: hashData, error: hashError } = await supabase
+      .rpc('hash_api_key', { api_key: newKey });
+    
+    if (hashError) {
+      toast({
+        title: "Error",
+        description: "Failed to generate API key hash",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const { error } = await supabase
       .from("api_keys")
       .insert({
         user_id: session.session.user.id,
         name: newKeyName.trim(),
-        key: newKey,
+        key: `${newKey.substring(0, 10)}...${newKey.substring(newKey.length - 4)}`, // Store masked version for display only
+        key_hash: hashData, // Store the hash for verification
       });
 
     if (error) {
@@ -155,28 +169,12 @@ export function ApiKeysDialog({ open, onOpenChange }: ApiKeysDialogProps) {
     setKeyToDelete(null);
   };
 
-  const copyToClipboard = (text: string) => {
+  const copyNewKeyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({
       title: "Copied",
       description: "API key copied to clipboard",
     });
-  };
-
-  const toggleKeyVisibility = (keyId: string) => {
-    setVisibleKeys(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(keyId)) {
-        newSet.delete(keyId);
-      } else {
-        newSet.add(keyId);
-      }
-      return newSet;
-    });
-  };
-
-  const maskKey = (key: string) => {
-    return `${key.substring(0, 10)}...${key.substring(key.length - 4)}`;
   };
 
   return (
@@ -236,23 +234,9 @@ export function ApiKeysDialog({ open, onOpenChange }: ApiKeysDialogProps) {
                     <TableRow key={apiKey.id}>
                       <TableCell className="font-medium">{apiKey.name}</TableCell>
                       <TableCell className="font-mono text-xs">
-                        <div className="flex items-center gap-2">
-                          <span>
-                            {visibleKeys.has(apiKey.id) ? apiKey.key : maskKey(apiKey.key)}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            onClick={() => toggleKeyVisibility(apiKey.id)}
-                          >
-                            {visibleKeys.has(apiKey.id) ? (
-                              <EyeOff className="h-3 w-3" />
-                            ) : (
-                              <Eye className="h-3 w-3" />
-                            )}
-                          </Button>
-                        </div>
+                        <span className="text-muted-foreground">
+                          {apiKey.key}
+                        </span>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {format(new Date(apiKey.created_at), "MMM d, yyyy")}
@@ -263,27 +247,17 @@ export function ApiKeysDialog({ open, onOpenChange }: ApiKeysDialogProps) {
                           : "Never"}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => copyToClipboard(apiKey.key)}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                            onClick={() => {
-                              setKeyToDelete(apiKey.id);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          onClick={() => {
+                            setKeyToDelete(apiKey.id);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -308,7 +282,7 @@ export function ApiKeysDialog({ open, onOpenChange }: ApiKeysDialogProps) {
           <AlertDialogFooter>
             <AlertDialogAction onClick={() => {
               if (newlyCreatedKey) {
-                copyToClipboard(newlyCreatedKey);
+                copyNewKeyToClipboard(newlyCreatedKey);
               }
               setShowNewKeyDialog(false);
               setNewlyCreatedKey(null);

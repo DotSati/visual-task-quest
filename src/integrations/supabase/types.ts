@@ -19,6 +19,7 @@ export type Database = {
           created_at: string
           id: string
           key: string
+          key_hash: string | null
           last_used_at: string | null
           name: string
           user_id: string
@@ -27,6 +28,7 @@ export type Database = {
           created_at?: string
           id?: string
           key: string
+          key_hash?: string | null
           last_used_at?: string | null
           name: string
           user_id: string
@@ -35,6 +37,7 @@ export type Database = {
           created_at?: string
           id?: string
           key?: string
+          key_hash?: string | null
           last_used_at?: string | null
           name?: string
           user_id?: string
@@ -479,6 +482,11 @@ export type Database = {
     }
     Functions: {
       get_next_task_number: { Args: { p_user_id: string }; Returns: number }
+      hash_api_key: { Args: { api_key: string }; Returns: string }
+      verify_api_key: {
+        Args: { api_key: string; stored_hash: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
