@@ -14,6 +14,7 @@ import { TaskEditDialog } from "@/components/kanban/TaskEditDialog";
 import { ColumnDialog } from "@/components/kanban/ColumnDialog";
 import { BoardSettingsDialog } from "@/components/kanban/BoardSettingsDialog";
 import { TagFilter } from "@/components/kanban/TagFilter";
+import { DateChangeDialog } from "@/components/kanban/DateChangeDialog";
 import { useAutomation } from "@/hooks/useAutomation";
 import {
   DropdownMenu,
@@ -74,6 +75,12 @@ export default function Board() {
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [taskTags, setTaskTags] = useState<Record<string, string[]>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [pendingMove, setPendingMove] = useState<{
+    taskId: string;
+    targetColumnId: string;
+    targetPosition: number;
+  } | null>(null);
+  const [dateChangeDialogOpen, setDateChangeDialogOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -288,6 +295,43 @@ export default function Board() {
 
   const { loadRules } = useAutomation(boardId, tasks, loadTasks);
 
+  const moveTask = async (taskId: string, targetColumnId: string, targetPosition: number, newDueDate?: string) => {
+    const updateData: Record<string, any> = {
+      column_id: targetColumnId,
+      position: targetPosition,
+    };
+    if (newDueDate) {
+      updateData.due_date = newDueDate;
+    }
+
+    const { error } = await supabase
+      .from("tasks")
+      .update(updateData)
+      .eq("id", taskId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to move task",
+        variant: "destructive",
+      });
+    }
+    loadTasks();
+  };
+
+  const handleDateChangeConfirm = async (newDate: Date) => {
+    if (!pendingMove) return;
+    const dateStr = newDate.toISOString().split("T")[0];
+    await moveTask(pendingMove.taskId, pendingMove.targetColumnId, pendingMove.targetPosition, dateStr);
+    setDateChangeDialogOpen(false);
+    setPendingMove(null);
+  };
+
+  const handleDateChangeCancel = () => {
+    setDateChangeDialogOpen(false);
+    setPendingMove(null);
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
   };
@@ -374,24 +418,17 @@ export default function Board() {
       targetPosition = tasksInColumn.length;
     }
 
-    // Update the dragged task's column and position
-    const { error } = await supabase
-      .from("tasks")
-      .update({
-        column_id: targetColumnId,
-        position: targetPosition
-      })
-      .eq("id", activeId);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to move task",
-        variant: "destructive"
-      });
+    // Check if task is overdue and being moved to a different column
+    if (activeTask.due_date && targetColumnId !== activeTask.column_id) {
+      const today = new Date().toISOString().split("T")[0];
+      if (activeTask.due_date < today) {
+        setPendingMove({ taskId: activeId, targetColumnId, targetPosition });
+        setDateChangeDialogOpen(true);
+        return;
+      }
     }
 
-    loadTasks();
+    await moveTask(activeId, targetColumnId, targetPosition);
   };
 
   const openNewTaskDialog = (columnId: string) => {
@@ -577,6 +614,16 @@ export default function Board() {
           columns={columns}
           onRulesChange={loadRules}
         />
+
+        {pendingMove && (
+          <DateChangeDialog
+            open={dateChangeDialogOpen}
+            onConfirm={handleDateChangeConfirm}
+            onCancel={handleDateChangeCancel}
+            taskTitle={tasks.find(t => t.id === pendingMove.taskId)?.title || ""}
+            currentDate={tasks.find(t => t.id === pendingMove.taskId)?.due_date || ""}
+          />
+        )}
       </div>
     </div>
   );
