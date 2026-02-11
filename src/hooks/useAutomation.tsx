@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -22,6 +22,7 @@ export function useAutomation(
 ) {
   const lastCheckRef = useRef<Date>(new Date());
   const rulesRef = useRef<AutomationRule[]>([]);
+  const [rules, setRules] = useState<AutomationRule[]>([]);
 
   const loadRules = async () => {
     if (!boardId) return;
@@ -34,6 +35,7 @@ export function useAutomation(
 
     if (!error && data) {
       rulesRef.current = data;
+      setRules(data);
     }
   };
 
@@ -108,5 +110,5 @@ export function useAutomation(
     return () => clearInterval(interval);
   }, [boardId, tasks]);
 
-  return { loadRules };
+  return { loadRules, rules };
 }
