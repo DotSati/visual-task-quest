@@ -321,7 +321,7 @@ export default function Board() {
 
   const handleDateChangeConfirm = async (newDate: Date) => {
     if (!pendingMove) return;
-    const dateStr = newDate.toISOString().split("T")[0];
+    const dateStr = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}-${String(newDate.getDate()).padStart(2, '0')}`;
     await moveTask(pendingMove.taskId, pendingMove.targetColumnId, pendingMove.targetPosition, dateStr);
     setDateChangeDialogOpen(false);
     setPendingMove(null);
