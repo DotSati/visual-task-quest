@@ -293,7 +293,7 @@ export default function Board() {
     }
   };
 
-  const { loadRules } = useAutomation(boardId, tasks, loadTasks);
+  const { loadRules, rules: automationRules } = useAutomation(boardId, tasks, loadTasks);
 
   const moveTask = async (taskId: string, targetColumnId: string, targetPosition: number, newDueDate?: string) => {
     const updateData: Record<string, any> = {
@@ -418,8 +418,9 @@ export default function Board() {
       targetPosition = tasksInColumn.length;
     }
 
-    // Check if task is overdue and being moved to a different column
-    if (activeTask.due_date && targetColumnId !== activeTask.column_id) {
+    // Check if task is overdue, moving to a different column, and target column has automation rules
+    const targetHasRules = automationRules.some(r => r.source_column_id === targetColumnId);
+    if (activeTask.due_date && targetColumnId !== activeTask.column_id && targetHasRules) {
       const today = new Date().toISOString().split("T")[0];
       if (activeTask.due_date < today) {
         setPendingMove({ taskId: activeId, targetColumnId, targetPosition });
