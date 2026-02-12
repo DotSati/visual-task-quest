@@ -422,7 +422,7 @@ export default function Board() {
     const targetHasRules = automationRules.some(r => r.source_column_id === targetColumnId);
     if (activeTask.due_date && targetColumnId !== activeTask.column_id && targetHasRules) {
       const today = new Date().toISOString().split("T")[0];
-      if (activeTask.due_date < today) {
+      if (activeTask.due_date <= today) {
         setPendingMove({ taskId: activeId, targetColumnId, targetPosition });
         setDateChangeDialogOpen(true);
         return;
