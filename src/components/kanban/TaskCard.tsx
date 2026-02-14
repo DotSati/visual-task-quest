@@ -15,6 +15,16 @@ import {
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubTrigger,
+  ContextMenuSubContent,
+} from "@/components/ui/context-menu";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -319,6 +329,8 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
 
   return (
     <>
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
     <Card
       ref={setNodeRef}
       style={{
@@ -555,6 +567,91 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
         </div>
       </CardContent>
     </Card>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-48">
+        <ContextMenuItem
+          onClick={() => {
+            navigator.clipboard.writeText(task.title);
+            toast({ title: "Copied", description: "Title copied to clipboard" });
+          }}
+        >
+          <Copy className="mr-2 h-4 w-4" />
+          Copy title
+        </ContextMenuItem>
+        {task.description && (
+          <ContextMenuItem
+            onClick={() => {
+              navigator.clipboard.writeText(task.description!);
+              toast({ title: "Copied", description: "Description copied to clipboard" });
+            }}
+          >
+            <Copy className="mr-2 h-4 w-4" />
+            Copy description
+          </ContextMenuItem>
+        )}
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>
+            <Tag className="mr-2 h-4 w-4" />
+            Tags
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent>
+            {allTags.length === 0 ? (
+              <ContextMenuItem disabled>No tags available</ContextMenuItem>
+            ) : (
+              allTags.map((tag) => {
+                const isSelected = tags.some(t => t.id === tag.id);
+                return (
+                  <ContextMenuItem
+                    key={tag.id}
+                    onClick={() => toggleTag(tag.id)}
+                    className="flex items-center gap-2"
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      className="pointer-events-none"
+                    />
+                    <span
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: tag.color || 'hsl(var(--muted))' }}
+                    />
+                    <span className="truncate">{tag.name}</span>
+                  </ContextMenuItem>
+                );
+              })
+            )}
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        <ContextMenuSeparator />
+        {boards.filter(board => board.id !== currentBoardId).length > 0 && (
+          <>
+            <ContextMenuSub>
+              <ContextMenuSubTrigger>
+                <ArrowRightLeft className="mr-2 h-4 w-4" />
+                Move to board
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent>
+                {boards.filter(board => board.id !== currentBoardId).map((board) => (
+                  <ContextMenuItem
+                    key={board.id}
+                    onClick={() => transferToBoard(board.id)}
+                  >
+                    {board.title}
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+            <ContextMenuSeparator />
+          </>
+        )}
+        <ContextMenuItem
+          className="text-destructive focus:text-destructive"
+          onClick={() => setDeleteDialogOpen(true)}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete Task
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
     
     <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
       <AlertDialogContent onClick={(e) => e.stopPropagation()}>
