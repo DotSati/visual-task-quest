@@ -88,6 +88,36 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
   const [tagInput, setTagInput] = useState("");
   const [assignees, setAssignees] = useState<Assignee[]>([]);
   const [assigneeEmail, setAssigneeEmail] = useState("");
+  const [unsavedDialogOpen, setUnsavedDialogOpen] = useState(false);
+
+  const hasUnsavedChanges = () => {
+    if (title !== task.title) return true;
+    if (description !== (task.description || "")) return true;
+    if (color !== (task.color || "")) return true;
+    const originalDate = task.due_date ? format(new Date(task.due_date), "yyyy-MM-dd") : null;
+    const currentDate = dueDate ? format(dueDate, "yyyy-MM-dd") : null;
+    if (currentDate !== originalDate) return true;
+    return false;
+  };
+
+  const handleClose = (openState: boolean) => {
+    if (!openState && hasUnsavedChanges()) {
+      setUnsavedDialogOpen(true);
+      return;
+    }
+    onOpenChange(openState);
+  };
+
+  const handleDiscardAndClose = () => {
+    setUnsavedDialogOpen(false);
+    onOpenChange(false);
+  };
+
+  const handleSaveAndClose = async () => {
+    await updateTask();
+    setUnsavedDialogOpen(false);
+    onOpenChange(false);
+  };
 
   useEffect(() => {
     if (open) {
@@ -684,7 +714,8 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-background border-b px-6 py-4">
@@ -725,7 +756,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-              <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+              <Button variant="outline" size="sm" onClick={() => handleClose(false)}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
@@ -1119,5 +1150,21 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
         </div>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={unsavedDialogOpen} onOpenChange={setUnsavedDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+          <AlertDialogDescription>
+            You have unsaved changes. Would you like to save them before closing?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={handleDiscardAndClose}>Discard</AlertDialogCancel>
+          <AlertDialogAction onClick={handleSaveAndClose}>Save Changes</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
