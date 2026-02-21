@@ -1,5 +1,6 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 
 type MarkdownRendererProps = {
   content: string;
@@ -10,7 +11,7 @@ export function MarkdownRenderer({ content, className = "" }: MarkdownRendererPr
   return (
     <div className={`prose prose-sm dark:prose-invert max-w-none break-words [overflow-wrap:anywhere] [word-break:break-word] ${className}`}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkBreaks]}
         components={{
           // Customize link behavior for security
           a: ({ node, ...props }) => (
