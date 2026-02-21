@@ -216,16 +216,19 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          notification_url: string | null
         }
         Insert: {
           created_at?: string
           email?: string | null
           id: string
+          notification_url?: string | null
         }
         Update: {
           created_at?: string
           email?: string | null
           id?: string
+          notification_url?: string | null
         }
         Relationships: []
       }
@@ -435,6 +438,8 @@ export type Database = {
           due_date: string | null
           hidden: boolean
           id: string
+          notification_at: string | null
+          notification_sent: boolean
           position: number
           task_number: number | null
           title: string
@@ -448,6 +453,8 @@ export type Database = {
           due_date?: string | null
           hidden?: boolean
           id?: string
+          notification_at?: string | null
+          notification_sent?: boolean
           position: number
           task_number?: number | null
           title: string
@@ -461,6 +468,8 @@ export type Database = {
           due_date?: string | null
           hidden?: boolean
           id?: string
+          notification_at?: string | null
+          notification_sent?: boolean
           position?: number
           task_number?: number | null
           title?: string

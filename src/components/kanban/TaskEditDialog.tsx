@@ -10,7 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Trash2, Plus, Eye, FileEdit, Paperclip, Download, X, CalendarIcon, Tag, UserPlus, User } from "lucide-react";
+import { Trash2, Plus, Eye, FileEdit, Paperclip, Download, X, CalendarIcon, Tag, UserPlus, User, Bell } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { TaskComments } from "./TaskComments";
 import { format } from "date-fns";
@@ -59,6 +59,8 @@ type Task = {
   task_number: number | null;
   color: string | null;
   subtasks?: Subtask[];
+  notification_at?: string | null;
+  notification_sent?: boolean;
 };
 
 type TaskEditDialogProps = {
@@ -89,11 +91,13 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
   const [assignees, setAssignees] = useState<Assignee[]>([]);
   const [assigneeEmail, setAssigneeEmail] = useState("");
   const [unsavedDialogOpen, setUnsavedDialogOpen] = useState(false);
+  const [notificationAt, setNotificationAt] = useState(task.notification_at || "");
 
   const hasUnsavedChanges = () => {
     if (title !== task.title) return true;
     if (description !== (task.description || "")) return true;
     if (color !== (task.color || "")) return true;
+    if (notificationAt !== (task.notification_at || "")) return true;
     const originalDate = task.due_date ? format(new Date(task.due_date), "yyyy-MM-dd") : null;
     const currentDate = dueDate ? format(dueDate, "yyyy-MM-dd") : null;
     if (currentDate !== originalDate) return true;
@@ -250,7 +254,9 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
         title,
         description: description || null,
         due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
-        color: color || null
+        color: color || null,
+        notification_at: notificationAt || null,
+        notification_sent: notificationAt ? false : undefined,
       })
       .eq("id", task.id);
 
@@ -990,6 +996,33 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
                   </Button>
                 )}
               </div>
+            </div>
+
+            {/* Notification */}
+            <div className="p-4 rounded-lg border bg-card space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Bell className="w-4 h-4 text-muted-foreground" />
+                Notification
+              </div>
+              <Input
+                type="datetime-local"
+                value={notificationAt ? notificationAt.slice(0, 16) : ""}
+                onChange={(e) => setNotificationAt(e.target.value ? new Date(e.target.value).toISOString() : "")}
+                className="h-9 text-sm"
+              />
+              {notificationAt && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full h-7 text-xs text-muted-foreground"
+                  onClick={() => setNotificationAt("")}
+                >
+                  Clear notification
+                </Button>
+              )}
+              {task.notification_sent && (
+                <p className="text-xs text-muted-foreground">✓ Notification sent</p>
+              )}
             </div>
           </section>
 

@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Plus, LogOut, Trash2, Key, GripVertical } from "lucide-react";
+import { Plus, LogOut, Trash2, Key, GripVertical, Bell } from "lucide-react";
 import { Session, User } from "@supabase/supabase-js";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ApiKeysDialog } from "@/components/ApiKeysDialog";
@@ -129,6 +129,8 @@ export default function Dashboard() {
   const [newBoardDescription, setNewBoardDescription] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [boardToDelete, setBoardToDelete] = useState<Board | null>(null);
+  const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
+  const [notificationUrl, setNotificationUrl] = useState("");
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -155,8 +157,35 @@ export default function Dashboard() {
   useEffect(() => {
     if (user) {
       loadBoards();
+      loadNotificationUrl();
     }
   }, [user]);
+
+  const loadNotificationUrl = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("profiles")
+      .select("notification_url")
+      .eq("id", user.id)
+      .single();
+    if (data?.notification_url) {
+      setNotificationUrl(data.notification_url);
+    }
+  };
+
+  const saveNotificationUrl = async () => {
+    if (!user) return;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ notification_url: notificationUrl || null })
+      .eq("id", user.id);
+    if (error) {
+      toast({ title: "Error", description: "Failed to save notification URL", variant: "destructive" });
+    } else {
+      toast({ title: "Success", description: "Notification URL saved" });
+      setNotificationDialogOpen(false);
+    }
+  };
 
   const loadBoards = async () => {
     setLoading(true);
@@ -330,6 +359,14 @@ export default function Dashboard() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setNotificationDialogOpen(true)}
+            >
+              <Bell className="w-4 h-4 mr-2" />
+              Notifications
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setApiKeysDialogOpen(true)}
             >
               <Key className="w-4 h-4 mr-2" />
@@ -433,6 +470,34 @@ export default function Dashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={notificationDialogOpen} onOpenChange={setNotificationDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Notification Settings</DialogTitle>
+            <DialogDescription>
+              Configure a webhook URL to receive task notifications via POST requests
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="notification-url">Webhook URL</Label>
+              <Input
+                id="notification-url"
+                placeholder="https://example.com/webhook"
+                value={notificationUrl}
+                onChange={(e) => setNotificationUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                A POST request with JSON body will be sent to this URL when a task notification is triggered. The payload includes: subject (task name), message, board, column, due_date, and task_id.
+              </p>
+            </div>
+            <Button onClick={saveNotificationUrl} className="w-full">
+              Save
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
