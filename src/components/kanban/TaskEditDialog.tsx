@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Trash2, Plus, Eye, FileEdit, Paperclip, Download, X, CalendarIcon, Tag, UserPlus, User, Bell } from "lucide-react";
@@ -1004,12 +1005,71 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
                 <Bell className="w-4 h-4 text-muted-foreground" />
                 Notification
               </div>
-              <Input
-                type="datetime-local"
-                value={notificationAt ? notificationAt.slice(0, 16) : ""}
-                onChange={(e) => setNotificationAt(e.target.value ? new Date(e.target.value).toISOString() : "")}
-                className="h-9 text-sm"
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal h-9 text-sm",
+                      !notificationAt && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {notificationAt ? format(new Date(notificationAt), "PPP HH:mm") : "Pick date & time"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 z-[200]" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={notificationAt ? new Date(notificationAt) : undefined}
+                    onSelect={(date) => {
+                      if (!date) return;
+                      const existing = notificationAt ? new Date(notificationAt) : new Date();
+                      date.setHours(existing.getHours(), existing.getMinutes());
+                      setNotificationAt(date.toISOString());
+                    }}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                  <div className="flex items-center gap-1 px-3 pb-3">
+                    <Select
+                      value={notificationAt ? String(new Date(notificationAt).getHours()) : "9"}
+                      onValueChange={(h) => {
+                        const d = notificationAt ? new Date(notificationAt) : new Date();
+                        d.setHours(parseInt(h));
+                        setNotificationAt(d.toISOString());
+                      }}
+                    >
+                      <SelectTrigger className="w-[70px] h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="pointer-events-auto z-[201]">
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <SelectItem key={i} value={String(i)}>{String(i).padStart(2, "0")}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span className="text-sm text-muted-foreground">:</span>
+                    <Select
+                      value={notificationAt ? String(new Date(notificationAt).getMinutes()) : "0"}
+                      onValueChange={(m) => {
+                        const d = notificationAt ? new Date(notificationAt) : new Date();
+                        d.setMinutes(parseInt(m));
+                        setNotificationAt(d.toISOString());
+                      }}
+                    >
+                      <SelectTrigger className="w-[70px] h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="pointer-events-auto z-[201]">
+                        {Array.from({ length: 12 }, (_, i) => i * 5).map((m) => (
+                          <SelectItem key={m} value={String(m)}>{String(m).padStart(2, "0")}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </PopoverContent>
+              </Popover>
               {notificationAt && (
                 <Button
                   variant="ghost"
