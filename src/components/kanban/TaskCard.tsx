@@ -4,6 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -450,31 +451,62 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
                   <Bell className="mr-2 h-4 w-4" />
                   Set notification
                 </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent onClick={(e) => e.stopPropagation()} className="p-2">
-                  <div className="flex flex-col gap-2">
-                    <input
-                      type="datetime-local"
-                      value={notificationAt ? notificationAt.slice(0, 16) : ""}
-                      onChange={(e) => updateNotification(e.target.value ? new Date(e.target.value).toISOString() : "")}
-                      className="text-xs border rounded px-2 py-1 bg-background text-foreground"
-                      onClick={(e) => e.stopPropagation()}
+                <DropdownMenuSubContent onClick={(e) => e.stopPropagation()} className="p-3 w-auto">
+                  <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+                    <CalendarComponent
+                      mode="single"
+                      selected={notificationAt ? new Date(notificationAt) : undefined}
+                      onSelect={(date) => {
+                        if (!date) return;
+                        const existing = notificationAt ? new Date(notificationAt) : new Date();
+                        date.setHours(existing.getHours(), existing.getMinutes());
+                        updateNotification(date.toISOString());
+                      }}
+                      className="p-0 pointer-events-auto"
                     />
-                    {notificationAt && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs h-6"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          updateNotification("");
+                    <div className="flex items-center gap-1">
+                      <Select
+                        value={notificationAt ? String(new Date(notificationAt).getHours()) : "9"}
+                        onValueChange={(h) => {
+                          const d = notificationAt ? new Date(notificationAt) : new Date();
+                          d.setHours(parseInt(h));
+                          updateNotification(d.toISOString());
                         }}
                       >
+                        <SelectTrigger className="w-[70px] h-7 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="pointer-events-auto">
+                          {Array.from({ length: 24 }, (_, i) => (
+                            <SelectItem key={i} value={String(i)}>{String(i).padStart(2, "0")}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-xs text-muted-foreground">:</span>
+                      <Select
+                        value={notificationAt ? String(new Date(notificationAt).getMinutes()) : "0"}
+                        onValueChange={(m) => {
+                          const d = notificationAt ? new Date(notificationAt) : new Date();
+                          d.setMinutes(parseInt(m));
+                          updateNotification(d.toISOString());
+                        }}
+                      >
+                        <SelectTrigger className="w-[70px] h-7 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="pointer-events-auto">
+                          {Array.from({ length: 12 }, (_, i) => i * 5).map((m) => (
+                            <SelectItem key={m} value={String(m)}>{String(m).padStart(2, "0")}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {notificationAt && (
+                      <Button variant="outline" size="sm" className="text-xs h-6" onClick={(e) => { e.stopPropagation(); updateNotification(""); }}>
                         Clear
                       </Button>
                     )}
-                    {notificationSent && (
-                      <span className="text-[10px] text-muted-foreground">✓ Sent</span>
-                    )}
+                    {notificationSent && <span className="text-[10px] text-muted-foreground">✓ Sent</span>}
                   </div>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
@@ -682,27 +714,62 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
             <Bell className="mr-2 h-4 w-4" />
             Set notification
           </ContextMenuSubTrigger>
-          <ContextMenuSubContent className="p-2">
+          <ContextMenuSubContent className="p-3 w-auto">
             <div className="flex flex-col gap-2">
-              <input
-                type="datetime-local"
-                value={notificationAt ? notificationAt.slice(0, 16) : ""}
-                onChange={(e) => updateNotification(e.target.value ? new Date(e.target.value).toISOString() : "")}
-                className="text-xs border rounded px-2 py-1 bg-background text-foreground"
+              <CalendarComponent
+                mode="single"
+                selected={notificationAt ? new Date(notificationAt) : undefined}
+                onSelect={(date) => {
+                  if (!date) return;
+                  const existing = notificationAt ? new Date(notificationAt) : new Date();
+                  date.setHours(existing.getHours(), existing.getMinutes());
+                  updateNotification(date.toISOString());
+                }}
+                className="p-0 pointer-events-auto"
               />
-              {notificationAt && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs h-6"
-                  onClick={() => updateNotification("")}
+              <div className="flex items-center gap-1">
+                <Select
+                  value={notificationAt ? String(new Date(notificationAt).getHours()) : "9"}
+                  onValueChange={(h) => {
+                    const d = notificationAt ? new Date(notificationAt) : new Date();
+                    d.setHours(parseInt(h));
+                    updateNotification(d.toISOString());
+                  }}
                 >
+                  <SelectTrigger className="w-[70px] h-7 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="pointer-events-auto">
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <SelectItem key={i} value={String(i)}>{String(i).padStart(2, "0")}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-xs text-muted-foreground">:</span>
+                <Select
+                  value={notificationAt ? String(new Date(notificationAt).getMinutes()) : "0"}
+                  onValueChange={(m) => {
+                    const d = notificationAt ? new Date(notificationAt) : new Date();
+                    d.setMinutes(parseInt(m));
+                    updateNotification(d.toISOString());
+                  }}
+                >
+                  <SelectTrigger className="w-[70px] h-7 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="pointer-events-auto">
+                    {Array.from({ length: 12 }, (_, i) => i * 5).map((m) => (
+                      <SelectItem key={m} value={String(m)}>{String(m).padStart(2, "0")}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {notificationAt && (
+                <Button variant="outline" size="sm" className="text-xs h-6" onClick={() => updateNotification("")}>
                   Clear
                 </Button>
               )}
-              {notificationSent && (
-                <span className="text-[10px] text-muted-foreground">✓ Sent</span>
-              )}
+              {notificationSent && <span className="text-[10px] text-muted-foreground">✓ Sent</span>}
             </div>
           </ContextMenuSubContent>
         </ContextMenuSub>
