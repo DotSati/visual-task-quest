@@ -647,6 +647,11 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
             <span>{commentCount}</span>
           </div>
         )}
+        {notificationAt && (
+          <div className="flex items-center text-muted-foreground" title={`Notification: ${format(new Date(notificationAt), "PPP HH:mm")}`}>
+            <Bell className={cn("w-3 h-3", notificationSent ? "text-muted-foreground" : "text-primary")} />
+          </div>
+        )}
         {task.created_at && (
           <span className="text-muted-foreground ml-auto">
             {format(new Date(task.created_at), "MMM d")}
