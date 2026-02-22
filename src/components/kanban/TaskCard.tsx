@@ -37,7 +37,7 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TaskEditDialog } from "./TaskEditDialog";
-import { Calendar, Paperclip, MoreVertical, ArrowRightLeft, Trash2, MessageSquare, User, Copy, Tag } from "lucide-react";
+import { Calendar, Paperclip, MoreVertical, ArrowRightLeft, Trash2, MessageSquare, User, Copy, Tag, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -75,6 +75,8 @@ type Task = {
   color: string | null;
   created_at?: string;
   subtasks?: Subtask[];
+  notification_at?: string | null;
+  notification_sent?: boolean;
 };
 
 type TaskCardProps = {
@@ -92,6 +94,8 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
   const [boards, setBoards] = useState<any[]>([]);
   const [currentBoardId, setCurrentBoardId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [notificationAt, setNotificationAt] = useState<string>(task.notification_at || "");
+  const [notificationSent, setNotificationSent] = useState(task.notification_sent || false);
   const [tags, setTags] = useState<Tag[]>([]);
   const [assignees, setAssignees] = useState<Assignee[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
@@ -319,6 +323,25 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
     }
   };
 
+  const updateNotification = async (value: string) => {
+    setNotificationAt(value);
+    const { error } = await supabase
+      .from("tasks")
+      .update({
+        notification_at: value || null,
+        notification_sent: false
+      })
+      .eq("id", task.id);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to set notification", variant: "destructive" });
+    } else {
+      setNotificationSent(false);
+      toast({ title: "Success", description: value ? "Notification scheduled" : "Notification cleared" });
+      onUpdate();
+    }
+  };
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -420,6 +443,39 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
                       );
                     })
                   )}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger onClick={(e) => e.stopPropagation()}>
+                  <Bell className="mr-2 h-4 w-4" />
+                  Set notification
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent onClick={(e) => e.stopPropagation()} className="p-2">
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="datetime-local"
+                      value={notificationAt ? notificationAt.slice(0, 16) : ""}
+                      onChange={(e) => updateNotification(e.target.value ? new Date(e.target.value).toISOString() : "")}
+                      className="text-xs border rounded px-2 py-1 bg-background text-foreground"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    {notificationAt && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-6"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateNotification("");
+                        }}
+                      >
+                        Clear
+                      </Button>
+                    )}
+                    {notificationSent && (
+                      <span className="text-[10px] text-muted-foreground">✓ Sent</span>
+                    )}
+                  </div>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
               <DropdownMenuSeparator />
@@ -619,6 +675,35 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
                 );
               })
             )}
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>
+            <Bell className="mr-2 h-4 w-4" />
+            Set notification
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent className="p-2">
+            <div className="flex flex-col gap-2">
+              <input
+                type="datetime-local"
+                value={notificationAt ? notificationAt.slice(0, 16) : ""}
+                onChange={(e) => updateNotification(e.target.value ? new Date(e.target.value).toISOString() : "")}
+                className="text-xs border rounded px-2 py-1 bg-background text-foreground"
+              />
+              {notificationAt && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-6"
+                  onClick={() => updateNotification("")}
+                >
+                  Clear
+                </Button>
+              )}
+              {notificationSent && (
+                <span className="text-[10px] text-muted-foreground">✓ Sent</span>
+              )}
+            </div>
           </ContextMenuSubContent>
         </ContextMenuSub>
         <ContextMenuSeparator />
