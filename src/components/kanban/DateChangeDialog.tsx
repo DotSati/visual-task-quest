@@ -47,7 +47,10 @@ export function DateChangeDialog({
         <DialogHeader>
           <DialogTitle>Update Due Date</DialogTitle>
           <DialogDescription>
-            The task "<span className="font-medium">{taskTitle}</span>" has an overdue date ({currentDate}). Please select a new due date before moving it.
+            {currentDate
+              ? <>The task "<span className="font-medium">{taskTitle}</span>" has an overdue date ({currentDate}). Please select a new due date before moving it.</>
+              : <>The task "<span className="font-medium">{taskTitle}</span>" has no due date. Please select a due date before moving it.</>
+            }
           </DialogDescription>
         </DialogHeader>
         <div className="flex justify-center py-2">

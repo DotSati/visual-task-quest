@@ -421,9 +421,9 @@ export default function Board() {
 
     // Check if task is overdue, moving to a different column, and target column has automation rules
     const targetHasRules = automationRules.some(r => r.source_column_id === targetColumnId);
-    if (activeTask.due_date && targetColumnId !== activeTask.column_id && targetHasRules) {
+    if (targetColumnId !== activeTask.column_id && targetHasRules) {
       const today = new Date().toISOString().split("T")[0];
-      if (activeTask.due_date <= today) {
+      if (!activeTask.due_date || activeTask.due_date <= today) {
         setPendingMove({ taskId: activeId, targetColumnId, targetPosition });
         setDateChangeDialogOpen(true);
         return;
