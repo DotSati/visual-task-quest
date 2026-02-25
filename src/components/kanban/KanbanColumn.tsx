@@ -65,6 +65,7 @@ type Task = {
   created_at?: string;
   updated_at?: string;
   hidden?: boolean;
+  pinned?: boolean;
   subtasks?: Subtask[];
 };
 
@@ -190,63 +191,50 @@ export function KanbanColumn({
   const sortedTasks = useMemo(() => {
     const sortOrder = column.sort_order || 'task_number_desc';
     const tasksToSort = displayTasks;
-    
-    if (sortOrder === 'manual') {
-      return [...tasksToSort].sort((a, b) => a.position - b.position);
-    }
-    
-    if (sortOrder === 'due_date_priority') {
-      return [...tasksToSort].sort((a, b) => {
+
+    const compareBySort = (a: Task, b: Task): number => {
+      if (sortOrder === 'manual') {
+        return a.position - b.position;
+      }
+
+      if (sortOrder === 'due_date_priority') {
         const aHasDate = !!a.due_date;
         const bHasDate = !!b.due_date;
-        
-        // Tasks with due dates come first
         if (aHasDate && !bHasDate) return -1;
         if (!aHasDate && bHasDate) return 1;
-        
-        // Both have due dates - sort by date, then by task number
         if (aHasDate && bHasDate) {
           const dateCompare = new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime();
           if (dateCompare !== 0) return dateCompare;
           return (a.task_number ?? 0) - (b.task_number ?? 0);
         }
-        
-      // Neither has due date - sort by task number
         return (a.task_number ?? 0) - (b.task_number ?? 0);
-      });
-    }
-    
-    if (sortOrder === 'due_date_modified') {
-      return [...tasksToSort].sort((a, b) => {
+      }
+
+      if (sortOrder === 'due_date_modified') {
         const aHasDate = !!a.due_date;
         const bHasDate = !!b.due_date;
-        
-        // Tasks with due dates come first
         if (aHasDate && !bHasDate) return -1;
         if (!aHasDate && bHasDate) return 1;
-        
-        // Both have due dates - sort by due date ascending
         if (aHasDate && bHasDate) {
           const dateCompare = new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime();
           if (dateCompare !== 0) return dateCompare;
         }
-        
-        // Same due date or no due date - sort by updated_at descending
         const aUpdated = a.updated_at ? new Date(a.updated_at).getTime() : 0;
         const bUpdated = b.updated_at ? new Date(b.updated_at).getTime() : 0;
         return bUpdated - aUpdated;
-      });
-    }
-    
-    return [...tasksToSort].sort((a, b) => {
+      }
+
       const aNum = a.task_number ?? 0;
       const bNum = b.task_number ?? 0;
-      
-      if (sortOrder === 'task_number_desc') {
-        return bNum - aNum;
-      } else {
-        return aNum - bNum;
-      }
+      return sortOrder === 'task_number_desc' ? bNum - aNum : aNum - bNum;
+    };
+
+    return [...tasksToSort].sort((a, b) => {
+      // Pinned tasks always come first
+      const aPinned = a.pinned ? 1 : 0;
+      const bPinned = b.pinned ? 1 : 0;
+      if (aPinned !== bPinned) return bPinned - aPinned;
+      return compareBySort(a, b);
     });
   }, [displayTasks, column.sort_order]);
 

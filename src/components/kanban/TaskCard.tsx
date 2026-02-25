@@ -38,7 +38,7 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TaskEditDialog } from "./TaskEditDialog";
-import { Calendar, Paperclip, MoreVertical, ArrowRightLeft, Trash2, MessageSquare, User, Copy, Tag, Bell } from "lucide-react";
+import { Calendar, Paperclip, MoreVertical, ArrowRightLeft, Trash2, MessageSquare, User, Copy, Tag, Bell, Pin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -78,6 +78,7 @@ type Task = {
   subtasks?: Subtask[];
   notification_at?: string | null;
   notification_sent?: boolean;
+  pinned?: boolean;
 };
 
 type TaskCardProps = {
@@ -343,6 +344,21 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
     }
   };
 
+  const togglePin = async () => {
+    const newPinned = !task.pinned;
+    const { error } = await supabase
+      .from("tasks")
+      .update({ pinned: newPinned })
+      .eq("id", task.id);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to update pin", variant: "destructive" });
+    } else {
+      toast({ title: newPinned ? "Pinned" : "Unpinned", description: newPinned ? "Task pinned to top" : "Task unpinned" });
+      onUpdate();
+    }
+  };
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -376,6 +392,9 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
         <CardTitle className="text-xs font-medium leading-tight line-clamp-2 flex items-center gap-2">
           {task.task_number && (
             <span className="text-muted-foreground">#{task.task_number}</span>
+          )}
+          {task.pinned && (
+            <Pin className="w-3 h-3 text-primary flex-shrink-0" />
           )}
           <span className="flex-1">{task.title}</span>
           <DropdownMenu>
@@ -411,6 +430,15 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
                   Copy description
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  togglePin();
+                }}
+              >
+                <Pin className="mr-2 h-4 w-4" />
+                {task.pinned ? "Unpin task" : "Pin to top"}
+              </DropdownMenuItem>
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger onClick={(e) => e.stopPropagation()}>
                   <Tag className="mr-2 h-4 w-4" />
@@ -682,6 +710,10 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
             Copy description
           </ContextMenuItem>
         )}
+        <ContextMenuItem onClick={() => togglePin()}>
+          <Pin className="mr-2 h-4 w-4" />
+          {task.pinned ? "Unpin task" : "Pin to top"}
+        </ContextMenuItem>
         <ContextMenuSub>
           <ContextMenuSubTrigger>
             <Tag className="mr-2 h-4 w-4" />

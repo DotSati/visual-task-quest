@@ -51,6 +51,7 @@ type Task = {
   color: string | null;
   created_at?: string;
   hidden?: boolean;
+  pinned?: boolean;
   subtasks?: Subtask[];
 };
 

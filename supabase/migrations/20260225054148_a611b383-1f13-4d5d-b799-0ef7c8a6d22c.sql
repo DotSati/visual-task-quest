@@ -1,0 +1,1 @@
+ALTER TABLE public.tasks ADD COLUMN pinned boolean NOT NULL DEFAULT false;
