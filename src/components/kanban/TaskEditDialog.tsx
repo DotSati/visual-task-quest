@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Trash2, Plus, Eye, FileEdit, Paperclip, Download, X, CalendarIcon, Tag, UserPlus, User, Bell } from "lucide-react";
+import { Trash2, Plus, Eye, FileEdit, Paperclip, Download, X, CalendarIcon, Tag, UserPlus, User, Bell, Pin } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { TaskComments } from "./TaskComments";
 import { format } from "date-fns";
@@ -62,6 +62,7 @@ type Task = {
   subtasks?: Subtask[];
   notification_at?: string | null;
   notification_sent?: boolean;
+  pinned?: boolean;
 };
 
 type TaskEditDialogProps = {
@@ -739,6 +740,25 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant={task.pinned ? "default" : "outline"}
+                size="sm"
+                onClick={async () => {
+                  const newPinned = !task.pinned;
+                  const { error } = await supabase
+                    .from("tasks")
+                    .update({ pinned: newPinned })
+                    .eq("id", task.id);
+                  if (!error) {
+                    task.pinned = newPinned;
+                    onUpdate();
+                    toast({ title: newPinned ? "Task pinned" : "Task unpinned" });
+                  }
+                }}
+                title={task.pinned ? "Unpin task" : "Pin to top"}
+              >
+                <Pin className={cn("w-4 h-4", task.pinned && "fill-current")} />
+              </Button>
               <Button onClick={updateTask} size="sm">
                 Save Changes
               </Button>
