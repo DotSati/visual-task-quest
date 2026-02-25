@@ -440,6 +440,7 @@ export type Database = {
           id: string
           notification_at: string | null
           notification_sent: boolean
+          pinned: boolean
           position: number
           task_number: number | null
           title: string
@@ -455,6 +456,7 @@ export type Database = {
           id?: string
           notification_at?: string | null
           notification_sent?: boolean
+          pinned?: boolean
           position: number
           task_number?: number | null
           title: string
@@ -470,6 +472,7 @@ export type Database = {
           id?: string
           notification_at?: string | null
           notification_sent?: boolean
+          pinned?: boolean
           position?: number
           task_number?: number | null
           title?: string
