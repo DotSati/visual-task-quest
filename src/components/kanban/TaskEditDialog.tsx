@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Trash2, Plus, Eye, FileEdit, Paperclip, Download, X, CalendarIcon, Tag, UserPlus, User, Bell, Pin } from "lucide-react";
+import { Trash2, Plus, Eye, FileEdit, Paperclip, Download, X, CalendarIcon, Tag, UserPlus, User, Bell, Pin, GripVertical, ArrowUp, ArrowDown } from "lucide-react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { TaskComments } from "./TaskComments";
 import { format } from "date-fns";
@@ -576,6 +576,33 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
     cancelEditingSubtask();
   };
 
+  const moveSubtask = async (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= subtasks.length) return;
+
+    const reordered = [...subtasks];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(newIndex, 0, moved);
+
+    // Optimistic update
+    setSubtasks(reordered);
+
+    // Update positions in DB
+    const updates = reordered.map((s, i) =>
+      supabase.from("subtasks").update({ position: i }).eq("id", s.id)
+    );
+    
+    const results = await Promise.all(updates);
+    const hasError = results.some(r => r.error);
+    
+    if (hasError) {
+      toast({ title: "Error", description: "Failed to reorder subtasks", variant: "destructive" });
+      loadSubtasks();
+    } else {
+      onUpdate();
+    }
+  };
+
   const uploadFile = async (file: File) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -1118,11 +1145,31 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
               </h3>
             </div>
             <div className="space-y-2">
-              {subtasks.map((subtask) => (
+              {subtasks.map((subtask, index) => (
                 <div 
                   key={subtask.id} 
                   className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors group"
                 >
+                  <div className="flex flex-col opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 p-0"
+                      onClick={() => moveSubtask(index, 'up')}
+                      disabled={index === 0}
+                    >
+                      <ArrowUp className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 p-0"
+                      onClick={() => moveSubtask(index, 'down')}
+                      disabled={index === subtasks.length - 1}
+                    >
+                      <ArrowDown className="w-3 h-3" />
+                    </Button>
+                  </div>
                   <Checkbox
                     checked={subtask.is_completed}
                     onCheckedChange={() => toggleSubtask(subtask.id, subtask.is_completed)}
