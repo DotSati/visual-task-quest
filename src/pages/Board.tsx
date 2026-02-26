@@ -333,6 +333,13 @@ export default function Board() {
     setPendingMove(null);
   };
 
+  const handleDateChangeSkip = async () => {
+    if (!pendingMove) return;
+    await moveTask(pendingMove.taskId, pendingMove.targetColumnId, pendingMove.targetPosition);
+    setDateChangeDialogOpen(false);
+    setPendingMove(null);
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
   };
@@ -622,6 +629,7 @@ export default function Board() {
             open={dateChangeDialogOpen}
             onConfirm={handleDateChangeConfirm}
             onCancel={handleDateChangeCancel}
+            onSkip={handleDateChangeSkip}
             taskTitle={tasks.find(t => t.id === pendingMove.taskId)?.title || ""}
             currentDate={tasks.find(t => t.id === pendingMove.taskId)?.due_date || ""}
           />

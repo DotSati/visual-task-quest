@@ -16,6 +16,7 @@ interface DateChangeDialogProps {
   open: boolean;
   onConfirm: (newDate: Date) => void;
   onCancel: () => void;
+  onSkip: () => void;
   taskTitle: string;
   currentDate: string;
 }
@@ -24,6 +25,7 @@ export function DateChangeDialog({
   open,
   onConfirm,
   onCancel,
+  onSkip,
   taskTitle,
   currentDate,
 }: DateChangeDialogProps) {
@@ -68,13 +70,18 @@ export function DateChangeDialog({
             New date: <span className="font-medium text-foreground">{format(selectedDate, "PPP")}</span>
           </p>
         )}
-        <DialogFooter>
-          <Button variant="outline" onClick={handleCancel}>
-            Cancel
+        <DialogFooter className="flex-row gap-2 sm:justify-between">
+          <Button variant="ghost" onClick={onSkip} className="mr-auto">
+            Skip & Move
           </Button>
-          <Button onClick={handleConfirm} disabled={!selectedDate}>
-            Move Task
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleCancel}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirm} disabled={!selectedDate}>
+              Move Task
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
