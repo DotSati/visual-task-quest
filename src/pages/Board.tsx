@@ -167,6 +167,8 @@ export default function Board() {
   }, [boardId]);
 
 
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
   useEffect(() => {
     const taskId = searchParams.get('task');
     if (taskId && tasks.length > 0) {
@@ -174,6 +176,36 @@ export default function Board() {
       setTaskEditOpen(true);
     }
   }, [searchParams, tasks]);
+
+  // Load task data for edit dialog, including hidden tasks
+  useEffect(() => {
+    if (!selectedTaskId) {
+      setSelectedTask(null);
+      return;
+    }
+    const found = tasks.find(t => t.id === selectedTaskId);
+    if (found) {
+      setSelectedTask(found);
+    } else {
+      // Task might be hidden, fetch it directly
+      const fetchTask = async () => {
+        const { data } = await supabase
+          .from("tasks")
+          .select("*")
+          .eq("id", selectedTaskId)
+          .single();
+        if (data) {
+          const { data: subtasksData } = await supabase
+            .from("subtasks")
+            .select("*")
+            .eq("task_id", data.id)
+            .order("position");
+          setSelectedTask({ ...data, subtasks: subtasksData || [] });
+        }
+      };
+      fetchTask();
+    }
+  }, [selectedTaskId, tasks]);
 
   const loadBoard = async () => {
     const { data, error } = await supabase
