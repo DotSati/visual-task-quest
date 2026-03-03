@@ -624,11 +624,11 @@ export default function Board() {
           </DragOverlay>
         </DndContext>
 
-        {selectedTaskId && tasks.find(t => t.id === selectedTaskId) && (
+        {selectedTask && (
           <TaskEditDialog
             open={taskEditOpen}
             onOpenChange={handleTaskEditClose}
-            task={tasks.find(t => t.id === selectedTaskId)!}
+            task={selectedTask}
             onUpdate={loadTasks}
           />
         )}
