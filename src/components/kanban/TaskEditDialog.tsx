@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Trash2, Plus, Eye, FileEdit, Paperclip, Download, X, CalendarIcon, Tag, UserPlus, User, Bell, Pin, GripVertical, ArrowUp, ArrowDown } from "lucide-react";
+import { Trash2, Plus, Eye, FileEdit, Paperclip, Download, X, CalendarIcon, Tag, UserPlus, User, Bell, Pin, GripVertical } from "lucide-react";
+import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, closestCenter } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { TaskComments } from "./TaskComments";
 import { format } from "date-fns";
@@ -64,6 +67,73 @@ type Task = {
   notification_sent?: boolean;
   pinned?: boolean;
 };
+
+function SortableSubtaskItem({ subtask, isEditing, editingTitle, onEditingTitleChange, onSaveEdit, onCancelEdit, onStartEdit, onToggle, onDelete }: {
+  subtask: Subtask;
+  isEditing: boolean;
+  editingTitle: string;
+  onEditingTitleChange: (v: string) => void;
+  onSaveEdit: () => void;
+  onCancelEdit: () => void;
+  onStartEdit: (s: Subtask) => void;
+  onToggle: (id: string, completed: boolean) => void;
+  onDelete: (id: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: subtask.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors group"
+    >
+      <div {...attributes} {...listeners} className="cursor-grab opacity-0 group-hover:opacity-100 transition-opacity">
+        <GripVertical className="w-4 h-4 text-muted-foreground" />
+      </div>
+      <Checkbox
+        checked={subtask.is_completed}
+        onCheckedChange={() => onToggle(subtask.id, subtask.is_completed)}
+        className="shrink-0"
+      />
+      {isEditing ? (
+        <Input
+          value={editingTitle}
+          onChange={(e) => onEditingTitleChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onSaveEdit();
+            if (e.key === "Escape") onCancelEdit();
+          }}
+          onBlur={onSaveEdit}
+          autoFocus
+          className="flex-1 h-8"
+        />
+      ) : (
+        <span
+          className={cn(
+            "flex-1 text-sm cursor-pointer hover:text-primary transition-colors",
+            subtask.is_completed && "line-through text-muted-foreground"
+          )}
+          onClick={() => onStartEdit(subtask)}
+        >
+          {subtask.title}
+        </span>
+      )}
+      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onStartEdit(subtask)}>
+          <FileEdit className="w-3.5 h-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => onDelete(subtask.id)}>
+          <Trash2 className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 type TaskEditDialogProps = {
   open: boolean;
@@ -576,26 +646,26 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
     cancelEditingSubtask();
   };
 
-  const moveSubtask = async (index: number, direction: 'up' | 'down') => {
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= subtasks.length) return;
+  const subtaskSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
-    const reordered = [...subtasks];
-    const [moved] = reordered.splice(index, 1);
-    reordered.splice(newIndex, 0, moved);
+  const handleSubtaskDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-    // Optimistic update
+    const oldIndex = subtasks.findIndex(s => s.id === active.id);
+    const newIndex = subtasks.findIndex(s => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(subtasks, oldIndex, newIndex);
     setSubtasks(reordered);
 
-    // Update positions in DB
     const updates = reordered.map((s, i) =>
       supabase.from("subtasks").update({ position: i }).eq("id", s.id)
     );
-    
     const results = await Promise.all(updates);
-    const hasError = results.some(r => r.error);
-    
-    if (hasError) {
+    if (results.some(r => r.error)) {
       toast({ title: "Error", description: "Failed to reorder subtasks", variant: "destructive" });
       loadSubtasks();
     } else {
@@ -1144,93 +1214,38 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
                 )}
               </h3>
             </div>
-            <div className="space-y-2">
-              {subtasks.map((subtask, index) => (
-                <div 
-                  key={subtask.id} 
-                  className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors group"
-                >
-                  <div className="flex flex-col opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5 p-0"
-                      onClick={() => moveSubtask(index, 'up')}
-                      disabled={index === 0}
-                    >
-                      <ArrowUp className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5 p-0"
-                      onClick={() => moveSubtask(index, 'down')}
-                      disabled={index === subtasks.length - 1}
-                    >
-                      <ArrowDown className="w-3 h-3" />
-                    </Button>
-                  </div>
-                  <Checkbox
-                    checked={subtask.is_completed}
-                    onCheckedChange={() => toggleSubtask(subtask.id, subtask.is_completed)}
-                    className="shrink-0"
-                  />
-                  {editingSubtaskId === subtask.id ? (
-                    <Input
-                      value={editingSubtaskTitle}
-                      onChange={(e) => setEditingSubtaskTitle(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") saveSubtaskEdit();
-                        if (e.key === "Escape") cancelEditingSubtask();
-                      }}
-                      onBlur={saveSubtaskEdit}
-                      autoFocus
-                      className="flex-1 h-8"
+            <DndContext sensors={subtaskSensors} collisionDetection={closestCenter} onDragEnd={handleSubtaskDragEnd}>
+              <SortableContext items={subtasks.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2">
+                  {subtasks.map((subtask) => (
+                    <SortableSubtaskItem
+                      key={subtask.id}
+                      subtask={subtask}
+                      isEditing={editingSubtaskId === subtask.id}
+                      editingTitle={editingSubtaskTitle}
+                      onEditingTitleChange={setEditingSubtaskTitle}
+                      onSaveEdit={saveSubtaskEdit}
+                      onCancelEdit={cancelEditingSubtask}
+                      onStartEdit={startEditingSubtask}
+                      onToggle={toggleSubtask}
+                      onDelete={deleteSubtask}
                     />
-                  ) : (
-                    <span
-                      className={cn(
-                        "flex-1 text-sm cursor-pointer hover:text-primary transition-colors",
-                        subtask.is_completed && "line-through text-muted-foreground"
-                      )}
-                      onClick={() => startEditingSubtask(subtask)}
-                    >
-                      {subtask.title}
-                    </span>
-                  )}
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => startEditingSubtask(subtask)}
-                    >
-                      <FileEdit className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-destructive hover:text-destructive"
-                      onClick={() => deleteSubtask(subtask.id)}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
+                  ))}
                 </div>
-              ))}
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Add a subtask..."
-                  value={newSubtaskTitle}
-                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && addSubtask()}
-                  className="h-9"
-                />
-                <Button onClick={addSubtask} size="sm" className="shrink-0">
-                  <Plus className="w-4 h-4 mr-1" />
-                  Add
-                </Button>
-              </div>
+              </SortableContext>
+            </DndContext>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add a subtask..."
+                value={newSubtaskTitle}
+                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && addSubtask()}
+                className="h-9"
+              />
+              <Button onClick={addSubtask} size="sm" className="shrink-0">
+                <Plus className="w-4 h-4 mr-1" />
+                Add
+              </Button>
             </div>
           </section>
 
