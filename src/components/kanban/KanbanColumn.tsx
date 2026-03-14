@@ -95,7 +95,8 @@ export function KanbanColumn({
   isHighlighted = false,
   refreshKey = 0,
   activeId = null,
-  dropTargetTaskId = null
+  dropTargetTaskId = null,
+  searchQuery = ""
 }: KanbanColumnProps) {
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
     id: column.id,
