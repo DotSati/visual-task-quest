@@ -81,6 +81,7 @@ interface KanbanColumnProps {
   refreshKey?: number;
   activeId?: string | null;
   dropTargetTaskId?: string | null;
+  searchQuery?: string;
 }
 
 export function KanbanColumn({ 
@@ -94,7 +95,8 @@ export function KanbanColumn({
   isHighlighted = false,
   refreshKey = 0,
   activeId = null,
-  dropTargetTaskId = null
+  dropTargetTaskId = null,
+  searchQuery = ""
 }: KanbanColumnProps) {
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
     id: column.id,
@@ -161,7 +163,15 @@ export function KanbanColumn({
     }
   }, [column.id, tasks, showHidden]);
 
-  const displayTasks = showHidden ? allTasks : tasks;
+  const displayTasks = useMemo(() => {
+    const base = showHidden ? allTasks : tasks;
+    if (!searchQuery.trim()) return base;
+    const query = searchQuery.toLowerCase();
+    return base.filter(task =>
+      task.title.toLowerCase().includes(query) ||
+      (task.description && task.description.toLowerCase().includes(query))
+    );
+  }, [showHidden, allTasks, tasks, searchQuery]);
 
   const unhideTask = async (taskId: string) => {
     const { error } = await supabase

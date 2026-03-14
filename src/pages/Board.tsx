@@ -603,6 +603,7 @@ export default function Board() {
                   refreshKey={refreshKey}
                   activeId={activeId}
                   dropTargetTaskId={dropTargetTaskId}
+                  searchQuery={searchQuery}
                 />
               );
               })}
