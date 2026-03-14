@@ -81,6 +81,7 @@ interface KanbanColumnProps {
   refreshKey?: number;
   activeId?: string | null;
   dropTargetTaskId?: string | null;
+  searchQuery?: string;
 }
 
 export function KanbanColumn({ 
