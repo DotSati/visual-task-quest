@@ -154,7 +154,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
   const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
   const [editingSubtaskTitle, setEditingSubtaskTitle] = useState("");
   const [subtasks, setSubtasks] = useState<Subtask[]>(task.subtasks || []);
-  const [isPreviewMode, setIsPreviewMode] = useState(true);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [taskTags, setTaskTags] = useState<Tag[]>([]);
