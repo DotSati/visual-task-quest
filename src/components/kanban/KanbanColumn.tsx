@@ -558,7 +558,7 @@ export function KanbanColumn({
             <h3 className="font-semibold text-foreground">
               {column.title}
               <span className="ml-2 text-sm font-normal text-muted-foreground">
-                ({tasks.length})
+                ({showHidden ? allTasks.length : tasks.length})
               </span>
             </h3>
           </div>
