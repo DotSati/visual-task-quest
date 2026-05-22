@@ -327,25 +327,12 @@ export default function Board() {
   };
 
   const loadTaskTags = async () => {
-    // Get all tasks for this board and their tags
-    const { data: tasksData } = await supabase
-      .from("tasks")
-      .select(`
-        id,
-        columns!inner(board_id)
-      `)
-      .eq("columns.board_id", boardId);
-
-    if (!tasksData || tasksData.length === 0) {
-      setTaskTags({});
-      return;
-    }
-
-    const taskIds = tasksData.map(t => t.id);
+    // Pull task_tags in a single query via the tasks->columns join, avoiding
+    // a separate roundtrip just to enumerate task ids.
     const { data: tagData } = await supabase
       .from("task_tags")
-      .select("task_id, tag_id")
-      .in("task_id", taskIds);
+      .select("task_id, tag_id, tasks!inner(columns!inner(board_id))")
+      .eq("tasks.columns.board_id", boardId);
 
     if (tagData) {
       const tagsMap: Record<string, string[]> = {};
@@ -356,6 +343,8 @@ export default function Board() {
         tagsMap[tt.task_id].push(tt.tag_id);
       });
       setTaskTags(tagsMap);
+    } else {
+      setTaskTags({});
     }
   };
 
