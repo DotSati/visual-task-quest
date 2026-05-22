@@ -129,16 +129,16 @@ export function KanbanColumn({
   const [hiddenCount, setHiddenCount] = useState(0);
   const fileInputRef = useState<HTMLInputElement | null>(null)[0];
 
-  // Load all tasks including hidden ones to get the count
+  // Count hidden tasks via head-only count query (no row payload)
   const loadHiddenTasksCount = async () => {
-    const { data, error } = await supabase
+    const { count, error } = await supabase
       .from("tasks")
-      .select("*")
+      .select("id", { count: "exact", head: true })
       .eq("column_id", column.id)
       .eq("hidden", true);
 
-    if (!error && data) {
-      setHiddenCount(data.length);
+    if (!error) {
+      setHiddenCount(count ?? 0);
     }
   };
 
@@ -151,27 +151,40 @@ export function KanbanColumn({
       .order("position");
 
     if (!error && data) {
-      const { data: subtasksData } = await supabase
-        .from("subtasks")
-        .select("*")
-        .in("task_id", data.map(t => t.id))
-        .order("position");
+      // Only fetch subtasks for visible (non-hidden) tasks. Hidden/completed
+      // tasks don't need their subtasks loaded — this drastically reduces
+      // the payload when there are many completed tasks.
+      const visibleIds = data.filter((t: Task) => !t.hidden).map(t => t.id);
+      let subtasksData: Subtask[] = [];
+      if (visibleIds.length > 0) {
+        const { data: st } = await supabase
+          .from("subtasks")
+          .select("id, task_id, title, description, is_completed, position")
+          .in("task_id", visibleIds)
+          .order("position");
+        subtasksData = (st as Subtask[]) || [];
+      }
 
       const tasksWithSubtasks = data.map((task: Task) => ({
         ...task,
-        subtasks: (subtasksData || []).filter((st: Subtask) => st.task_id === task.id)
+        subtasks: subtasksData.filter((st) => st.task_id === task.id)
       }));
       setAllTasks(tasksWithSubtasks);
     }
   };
 
-  // Update when tasks or column changes
+  // Refresh hidden count whenever visible tasks change (cheap head query).
   useEffect(() => {
     loadHiddenTasksCount();
+  }, [column.id, tasks]);
+
+  // Only reload the full hidden-tasks list when the toggle/column/refresh
+  // changes — not on every visible-task update.
+  useEffect(() => {
     if (showHidden) {
       loadAllTasks();
     }
-  }, [column.id, tasks, showHidden]);
+  }, [column.id, showHidden, refreshKey]);
 
   const displayTasks = useMemo(() => {
     const base = showHidden ? allTasks : tasks;
