@@ -260,13 +260,25 @@ export default function Board() {
   };
 
   const loadTasks = async () => {
+    // Use known column ids to avoid an inner-join roundtrip and reduce payload.
+    const columnIds = columns.map(c => c.id);
+    if (columnIds.length === 0) {
+      // Fallback: derive column ids first
+      const { data: cols } = await supabase
+        .from("columns")
+        .select("id")
+        .eq("board_id", boardId);
+      if (cols) columnIds.push(...cols.map(c => c.id));
+    }
+    if (columnIds.length === 0) {
+      setTasks([]);
+      return;
+    }
+
     const { data: tasksData, error: tasksError } = await supabase
       .from("tasks")
-      .select(`
-        *,
-        columns!inner(board_id)
-      `)
-      .eq("columns.board_id", boardId)
+      .select("id,title,description,due_date,position,column_id,task_number,color,created_at,updated_at,hidden,pinned")
+      .in("column_id", columnIds)
       .eq("hidden", false)
       .order("position");
 
@@ -279,18 +291,39 @@ export default function Board() {
       return;
     }
 
-    const { data: subtasksData } = await supabase
-      .from("subtasks")
-      .select("*")
-      .in("task_id", (tasksData || []).map(t => t.id))
-      .order("position");
+    const taskIds = (tasksData || []).map(t => t.id);
+    let subtasksData: any[] = [];
+    if (taskIds.length > 0) {
+      const { data: st } = await supabase
+        .from("subtasks")
+        .select("id,task_id,title,description,is_completed,position")
+        .in("task_id", taskIds)
+        .order("position");
+      subtasksData = st || [];
+    }
+
+    // Group subtasks by task_id once (O(n)) instead of filtering per task (O(n*m)).
+    const subtasksByTask: Record<string, any[]> = {};
+    for (const st of subtasksData) {
+      (subtasksByTask[st.task_id] ||= []).push(st);
+    }
 
     const tasksWithSubtasks = (tasksData || []).map(task => ({
       ...task,
-      subtasks: (subtasksData || []).filter(st => st.task_id === task.id)
+      subtasks: subtasksByTask[task.id] || []
     }));
 
     setTasks(tasksWithSubtasks);
+  };
+
+  // Debounce realtime-triggered reloads so a burst of changes does one fetch.
+  const reloadTimerRef = useRef<number | null>(null);
+  const scheduleLoadTasks = () => {
+    if (reloadTimerRef.current) window.clearTimeout(reloadTimerRef.current);
+    reloadTimerRef.current = window.setTimeout(() => {
+      reloadTimerRef.current = null;
+      loadTasks();
+    }, 150);
   };
 
   const loadTaskTags = async () => {
