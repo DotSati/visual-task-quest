@@ -151,7 +151,17 @@ export function KanbanColumn({
       .order("position");
 
     if (!error && data) {
-      setAllTasks(data);
+      const { data: subtasksData } = await supabase
+        .from("subtasks")
+        .select("*")
+        .in("task_id", data.map(t => t.id))
+        .order("position");
+
+      const tasksWithSubtasks = data.map((task: Task) => ({
+        ...task,
+        subtasks: (subtasksData || []).filter((st: Subtask) => st.task_id === task.id)
+      }));
+      setAllTasks(tasksWithSubtasks);
     }
   };
 
