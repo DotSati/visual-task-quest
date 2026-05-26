@@ -87,13 +87,16 @@ Deno.serve(async (req) => {
 
         console.log(`Notification sent for task "${task.title}" to ${profile.notification_url}: ${response.status}`);
 
-        // Mark notification as sent
-        await supabase
-          .from('tasks')
-          .update({ notification_sent: true })
-          .eq('id', task.id);
-
-        sentCount++;
+        if (response.ok) {
+          // Mark notification as sent only on success
+          await supabase
+            .from('tasks')
+            .update({ notification_sent: true })
+            .eq('id', task.id);
+          sentCount++;
+        } else {
+          console.warn(`Webhook returned non-2xx (${response.status}) for task "${task.title}" — will retry next run.`);
+        }
       } catch (fetchError) {
         console.error(`Failed to send notification for task "${task.title}":`, fetchError);
       }
