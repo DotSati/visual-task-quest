@@ -529,9 +529,19 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
                         </SelectContent>
                       </Select>
                     </div>
+                    <Button
+                      size="sm"
+                      className="text-xs h-7 w-full"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+                      }}
+                    >
+                      Set notification
+                    </Button>
                     {notificationAt && (
                       <Button variant="outline" size="sm" className="text-xs h-6" onClick={(e) => { e.stopPropagation(); updateNotification(""); }}>
-                        Clear
+                        Clear notification
                       </Button>
                     )}
                     {notificationSent && <span className="text-[10px] text-muted-foreground">✓ Sent</span>}
@@ -801,9 +811,16 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
                   </SelectContent>
                 </Select>
               </div>
+              <Button
+                size="sm"
+                className="text-xs h-7 w-full"
+                onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))}
+              >
+                Set notification
+              </Button>
               {notificationAt && (
                 <Button variant="outline" size="sm" className="text-xs h-6" onClick={() => updateNotification("")}>
-                  Clear
+                  Clear notification
                 </Button>
               )}
               {notificationSent && <span className="text-[10px] text-muted-foreground">✓ Sent</span>}
