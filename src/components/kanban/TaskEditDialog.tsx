@@ -164,6 +164,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
   const [assigneeEmail, setAssigneeEmail] = useState("");
   const [unsavedDialogOpen, setUnsavedDialogOpen] = useState(false);
   const [notificationAt, setNotificationAt] = useState(task.notification_at || "");
+  const [notificationPopoverOpen, setNotificationPopoverOpen] = useState(false);
 
   const hasUnsavedChanges = () => {
     if (title !== task.title) return true;
