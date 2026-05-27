@@ -1123,7 +1123,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
                 <Bell className="w-4 h-4 text-muted-foreground" />
                 Notification
               </div>
-              <Popover>
+              <Popover open={notificationPopoverOpen} onOpenChange={setNotificationPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -1185,6 +1185,15 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="px-3 pb-3">
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setNotificationPopoverOpen(false)}
+                    >
+                      Set notification
+                    </Button>
                   </div>
                 </PopoverContent>
               </Popover>
