@@ -277,7 +277,7 @@ export default function Board() {
 
     const { data: tasksData, error: tasksError } = await supabase
       .from("tasks")
-      .select("id,title,description,due_date,position,column_id,task_number,color,created_at,updated_at,hidden,pinned")
+      .select("id,title,description,due_date,position,column_id,task_number,color,created_at,updated_at,hidden,pinned,notification_at,notification_sent")
       .in("column_id", columnIds)
       .eq("hidden", false)
       .order("position");
