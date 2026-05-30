@@ -43,6 +43,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import {
+  fetchTaskTags,
+  fetchAttachmentCount,
+  fetchCommentCount,
+  fetchTaskAssignees,
+  fetchAllTagsForUser,
+  fetchBoardsForUser,
+  invalidateAllTagsCache,
+} from "./taskCardBatcher";
 
 type Subtask = {
   id: string;
@@ -127,48 +136,21 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
   }, [task.id, refreshKey]);
 
   const loadAttachmentCount = async () => {
-    const { count } = await supabase
-      .from("task_attachments")
-      .select("*", { count: 'exact', head: true })
-      .eq("task_id", task.id);
-    
-    setAttachmentCount(count || 0);
+    setAttachmentCount(await fetchAttachmentCount(task.id));
   };
 
   const loadCommentCount = async () => {
-    const { count } = await supabase
-      .from("task_comments")
-      .select("*", { count: 'exact', head: true })
-      .eq("task_id", task.id);
-    
-    setCommentCount(count || 0);
+    setCommentCount(await fetchCommentCount(task.id));
   };
 
   const loadTags = async () => {
-    const { data, error } = await supabase
-      .from("task_tags")
-      .select("tags(id, name, color)")
-      .eq("task_id", task.id);
-
-    if (!error && data) {
-      const taskTags = data.map((tt: any) => tt.tags).filter(Boolean);
-      setTags(taskTags);
-    }
+    setTags(await fetchTaskTags(task.id));
   };
 
   const loadAllTags = async () => {
     const { data: session } = await supabase.auth.getSession();
     if (!session.session?.user) return;
-
-    const { data, error } = await supabase
-      .from("tags")
-      .select("*")
-      .eq("user_id", session.session.user.id)
-      .order("name");
-
-    if (!error && data) {
-      setAllTags(data);
-    }
+    setAllTags(await fetchAllTagsForUser(session.session.user.id));
   };
 
   const toggleTag = async (tagId: string) => {
@@ -183,6 +165,7 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
 
       if (!error) {
         setTags(tags.filter(t => t.id !== tagId));
+        invalidateAllTagsCache();
       }
     } else {
       const { error } = await supabase
@@ -194,25 +177,14 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
         if (newTag) {
           setTags([...tags, newTag]);
         }
+        invalidateAllTagsCache();
       }
     }
     onUpdate();
   };
 
   const loadAssignees = async () => {
-    const { data, error } = await supabase
-      .from("task_assignees")
-      .select("id, user_id, profiles(email)")
-      .eq("task_id", task.id);
-
-    if (!error && data) {
-      const assigneesWithEmail = data.map((assignee: any) => ({
-        id: assignee.id,
-        user_id: assignee.user_id,
-        email: assignee.profiles?.email
-      }));
-      setAssignees(assigneesWithEmail);
-    }
+    setAssignees(await fetchTaskAssignees(task.id));
   };
 
   const loadBoards = async () => {
@@ -230,15 +202,7 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
       setCurrentBoardId(columnData.board_id);
     }
 
-    const { data, error } = await supabase
-      .from("boards")
-      .select("*")
-      .eq("user_id", session.session.user.id)
-      .order("position", { ascending: true });
-
-    if (!error && data) {
-      setBoards(data);
-    }
+    setBoards(await fetchBoardsForUser(session.session.user.id));
   };
 
   const transferToBoard = async (targetBoardId: string) => {
