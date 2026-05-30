@@ -142,24 +142,28 @@ let boardsCache: { userId: string; promise: Promise<any[]> } | null = null;
 
 export async function fetchAllTagsForUser(userId: string): Promise<CardTag[]> {
   if (allTagsCache && allTagsCache.userId === userId) return allTagsCache.promise;
-  const promise = supabase
-    .from("tags")
-    .select("*")
-    .eq("user_id", userId)
-    .order("name")
-    .then(({ data, error }) => (!error && data ? (data as CardTag[]) : []));
+  const promise = (async () => {
+    const { data, error } = await supabase
+      .from("tags")
+      .select("*")
+      .eq("user_id", userId)
+      .order("name");
+    return !error && data ? (data as CardTag[]) : [];
+  })();
   allTagsCache = { userId, promise };
   return promise;
 }
 
 export async function fetchBoardsForUser(userId: string): Promise<any[]> {
   if (boardsCache && boardsCache.userId === userId) return boardsCache.promise;
-  const promise = supabase
-    .from("boards")
-    .select("*")
-    .eq("user_id", userId)
-    .order("position", { ascending: true })
-    .then(({ data, error }) => (!error && data ? data : []));
+  const promise = (async () => {
+    const { data, error } = await supabase
+      .from("boards")
+      .select("*")
+      .eq("user_id", userId)
+      .order("position", { ascending: true });
+    return !error && data ? data : [];
+  })();
   boardsCache = { userId, promise };
   return promise;
 }
