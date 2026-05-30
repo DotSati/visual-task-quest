@@ -823,6 +823,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onUpdate }: TaskEditD
     <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogTitle className="sr-only">{title || "Edit Task"}</DialogTitle>
         {/* Header */}
         <div className="sticky top-0 z-10 bg-background border-b px-6 py-4">
           <div className="flex items-start justify-between gap-4">
