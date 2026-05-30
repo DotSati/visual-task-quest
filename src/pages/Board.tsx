@@ -294,12 +294,20 @@ export default function Board() {
     const taskIds = (tasksData || []).map(t => t.id);
     let subtasksData: any[] = [];
     if (taskIds.length > 0) {
-      const { data: st } = await supabase
-        .from("subtasks")
-        .select("id,task_id,title,description,is_completed,position")
-        .in("task_id", taskIds)
-        .order("position");
-      subtasksData = st || [];
+      const BATCH = 100;
+      for (let i = 0; i < taskIds.length; i += BATCH) {
+        const batch = taskIds.slice(i, i + BATCH);
+        const { data: st, error: stErr } = await supabase
+          .from("subtasks")
+          .select("id,task_id,title,description,is_completed,position")
+          .in("task_id", batch)
+          .order("position");
+        if (stErr) {
+          console.error("Failed to load subtasks batch", stErr);
+          continue;
+        }
+        if (st) subtasksData.push(...st);
+      }
     }
 
     // Group subtasks by task_id once (O(n)) instead of filtering per task (O(n*m)).
