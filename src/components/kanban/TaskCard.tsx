@@ -324,6 +324,21 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
     }
   };
 
+  const toggleHidden = async () => {
+    const newHidden = !task.hidden;
+    const { error } = await supabase
+      .from("tasks")
+      .update({ hidden: newHidden })
+      .eq("id", task.id);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to update task visibility", variant: "destructive" });
+    } else {
+      toast({ title: newHidden ? "Hidden" : "Visible", description: newHidden ? "Task hidden from board" : "Task is now visible" });
+      onUpdate();
+    }
+  };
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
