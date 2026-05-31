@@ -419,6 +419,15 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
                 <Pin className="mr-2 h-4 w-4" />
                 {task.pinned ? "Unpin task" : "Pin to top"}
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleHidden();
+                }}
+              >
+                {task.hidden ? <Eye className="mr-2 h-4 w-4" /> : <EyeOff className="mr-2 h-4 w-4" />}
+                {task.hidden ? "Unhide task" : "Hide task"}
+              </DropdownMenuItem>
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger onClick={(e) => e.stopPropagation()}>
                   <Tag className="mr-2 h-4 w-4" />
