@@ -38,7 +38,7 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TaskEditDialog } from "./TaskEditDialog";
-import { Calendar, Paperclip, MoreVertical, ArrowRightLeft, Trash2, MessageSquare, User, Copy, Tag, Bell, Pin } from "lucide-react";
+import { Calendar, Paperclip, MoreVertical, ArrowRightLeft, Trash2, MessageSquare, User, Copy, Tag, Bell, Pin, EyeOff, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -88,6 +88,7 @@ type Task = {
   notification_at?: string | null;
   notification_sent?: boolean;
   pinned?: boolean;
+  hidden?: boolean;
 };
 
 type TaskCardProps = {
@@ -323,6 +324,21 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
     }
   };
 
+  const toggleHidden = async () => {
+    const newHidden = !task.hidden;
+    const { error } = await supabase
+      .from("tasks")
+      .update({ hidden: newHidden })
+      .eq("id", task.id);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to update task visibility", variant: "destructive" });
+    } else {
+      toast({ title: newHidden ? "Hidden" : "Visible", description: newHidden ? "Task hidden from board" : "Task is now visible" });
+      onUpdate();
+    }
+  };
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -402,6 +418,15 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
               >
                 <Pin className="mr-2 h-4 w-4" />
                 {task.pinned ? "Unpin task" : "Pin to top"}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleHidden();
+                }}
+              >
+                {task.hidden ? <Eye className="mr-2 h-4 w-4" /> : <EyeOff className="mr-2 h-4 w-4" />}
+                {task.hidden ? "Unhide task" : "Hide task"}
               </DropdownMenuItem>
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger onClick={(e) => e.stopPropagation()}>
@@ -687,6 +712,10 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
         <ContextMenuItem onClick={() => togglePin()}>
           <Pin className="mr-2 h-4 w-4" />
           {task.pinned ? "Unpin task" : "Pin to top"}
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => toggleHidden()}>
+          {task.hidden ? <Eye className="mr-2 h-4 w-4" /> : <EyeOff className="mr-2 h-4 w-4" />}
+          {task.hidden ? "Unhide task" : "Hide task"}
         </ContextMenuItem>
         <ContextMenuSub>
           <ContextMenuSubTrigger>
