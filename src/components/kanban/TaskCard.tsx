@@ -88,6 +88,7 @@ type Task = {
   notification_at?: string | null;
   notification_sent?: boolean;
   pinned?: boolean;
+  hidden?: boolean;
 };
 
 type TaskCardProps = {
