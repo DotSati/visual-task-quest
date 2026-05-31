@@ -713,6 +713,10 @@ export function TaskCard({ task, onUpdate, onClick, className, refreshKey = 0 }:
           <Pin className="mr-2 h-4 w-4" />
           {task.pinned ? "Unpin task" : "Pin to top"}
         </ContextMenuItem>
+        <ContextMenuItem onClick={() => toggleHidden()}>
+          {task.hidden ? <Eye className="mr-2 h-4 w-4" /> : <EyeOff className="mr-2 h-4 w-4" />}
+          {task.hidden ? "Unhide task" : "Hide task"}
+        </ContextMenuItem>
         <ContextMenuSub>
           <ContextMenuSubTrigger>
             <Tag className="mr-2 h-4 w-4" />
